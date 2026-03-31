@@ -40,9 +40,23 @@ class LLMClient:
     
     def __init__(self, config: Config):
         self.config = config
+        
+        # Create custom HTTP client with very long timeout for large context processing
+        # Large contexts (100k+ tokens) can take 15+ minutes to process
+        import httpx
+        http_client = httpx.Client(
+            timeout=httpx.Timeout(
+                connect=30.0,      # Connection timeout
+                read=1800.0,       # Read timeout: 30 minutes
+                write=1800.0,      # Write timeout: 30 minutes
+                pool=30.0          # Pool timeout
+            )
+        )
+        
         self.client = OpenAI(
             base_url=config.llm.base_url,
-            api_key=config.llm.api_key
+            api_key=config.llm.api_key,
+            http_client=http_client  # Use custom client with extended timeout
         )
         self.model = config.llm.model
     
