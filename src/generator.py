@@ -153,8 +153,22 @@ Expert: [dialogue]
             return script
             
         except Exception as e:
+            error_msg = str(e)
             logger.error(f"Failed to generate script: {e}")
-            raise RuntimeError(f"Script generation failed: {e}")
+            
+            # Provide helpful error messages
+            if "connection" in error_msg.lower() or "refused" in error_msg.lower():
+                raise RuntimeError(
+                    "Lost connection to LM Studio. Please ensure LM Studio is still running "
+                    "with the model loaded. For very long content, the model may take time to respond."
+                )
+            elif "timeout" in error_msg.lower():
+                raise RuntimeError(
+                    "Request timed out. The content may be too long. "
+                    "Try with shorter content or check if LM Studio is responding."
+                )
+            else:
+                raise RuntimeError(f"Script generation failed: {e}")
 
 
 class TTSClient:
