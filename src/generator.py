@@ -56,6 +56,40 @@ class LLMClient:
             logger.error(f"Cannot connect to LM Studio at {self.config.llm.base_url}: {e}")
             return False
     
+    def _calculate_dynamic_word_count(self, content: str) -> int:
+        """
+        Calculate dynamic word count based on input content length.
+        
+        The podcast will be as long as it needs to be to cover all content:
+        - Short content (< 500 words): 2x expansion for engaging discussion
+        - Medium content (500-2000 words): 1.5x for thorough coverage
+        - Long content (2000-5000 words): 1.2x for detailed discussion
+        - Very long content (> 5000 words): 1.1x - full coverage, no summarization
+        
+        Args:
+            content: The source content
+        
+        Returns:
+            Calculated target word count for the podcast
+        """
+        # Count words in content
+        content_words = len(content.split())
+        
+        if content_words < 500:
+            # Short content - expand for engaging discussion
+            target = max(800, int(content_words * 2))
+        elif content_words < 2000:
+            # Medium content - thorough coverage
+            target = int(content_words * 1.5)
+        elif content_words < 5000:
+            # Long content - detailed discussion
+            target = int(content_words * 1.2)
+        else:
+            # Very long content - full coverage, no summarization
+            target = int(content_words * 1.1)
+        
+        return target
+    
     def generate_script(self, content: str, conversation_config: dict) -> str:
         """
         Generate a podcast script from content.
@@ -68,10 +102,15 @@ class LLMClient:
             Generated script as text
         """
         style = ", ".join(conversation_config.get("conversation_style", ["casual", "informative"]))
-        word_count = conversation_config.get("word_count", 2000)
+        base_word_count = conversation_config.get("word_count", 2000)
         podcast_name = conversation_config.get("podcast_name", "Local Podcast")
         creativity = conversation_config.get("creativity", 0.7)
         user_instructions = conversation_config.get("user_instructions", "")
+        
+        # Calculate dynamic word count based on content length
+        word_count = self._calculate_dynamic_word_count(content)
+        content_words = len(content.split())
+        logger.info(f"📊 Content: {content_words} words → Target podcast: {word_count} words")
         
         system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging, natural-sounding 2-person conversation between a 'Host' and an 'Expert'.
 
@@ -79,11 +118,13 @@ Guidelines:
 - Style: {style}
 - Target length: approximately {word_count} words
 - Podcast name: {podcast_name}
+- Cover ALL the content comprehensively - do not skip or summarize important details
 - Make it conversational with natural flow, occasional verbal fillers, and genuine curiosity
 - The Host should ask clarifying questions and show interest
 - The Expert should provide detailed, accurate information from the source content
 - Include brief transitions between topics
 - Avoid overly formal language; make it feel like a real conversation
+- The podcast should be as long as needed to cover all the content properly
 
 Format each line as:
 Host: [dialogue]

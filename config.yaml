@@ -25,7 +25,9 @@ tts:
 
 # Conversation Style Configuration
 conversation:
-  word_count: 2000
+  # word_count is now DYNAMIC - automatically calculated based on input content length
+  # Short content: 2x expansion | Medium: 1.5x | Long: 1.2x | Very long: 1.1x
+  # The podcast will be as long as needed to cover all content
   conversation_style:
     - casual
     - informative
