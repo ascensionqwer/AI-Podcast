@@ -1,0 +1,40 @@
+# Podcastfy Local Configuration
+# Unified config for LM Studio + Kokoro TTS
+
+# LLM Configuration - LM Studio (OpenAI-compatible API)
+llm:
+  model: "qwen3.5-122b-a10b"
+  base_url: "http://localhost:1234/v1"
+  api_key: "lm-studio"
+  temperature: 0.7
+  max_tokens: 262144
+
+# TTS Configuration - Kokoro via MLX-Audio
+tts:
+  provider: "kokoro"
+  model: "mlx-community/Kokoro-82M-bf16"
+  server:
+    host: "127.0.0.1"
+    port: 8880
+    auto_start: true  # Automatically start embedded server if not running
+  voices:
+    speaker_1: "af_bella"  # Female voice (Host)
+    speaker_2: "am_adam"    # Male voice (Expert)
+  sample_rate: 24000
+  output_format: "wav"  # wav or mp3
+
+# Conversation Style Configuration
+conversation:
+  word_count: 2000
+  conversation_style:
+    - casual
+    - informative
+  podcast_name: "Local Podcast"
+  creativity: 0.7
+  user_instructions: ""  # Optional: Add custom instructions for the AI hosts
+
+# Output Configuration
+output:
+  directory: "./output"
+  default_filename: "podcast.wav"
+  keep_temp_script: false  # Keep intermediate script file for debugging

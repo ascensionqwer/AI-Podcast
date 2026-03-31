@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Output files (keep directory structure)
+output/*.wav
+output/*.mp3
+output/*.txt
+!output/.gitkeep
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Model cache (optional - uncomment if you want to exclude)
+# .cache/
+
+# Environment variables
+.env
+.env.local
+
+# Plans (internal)
+plans/

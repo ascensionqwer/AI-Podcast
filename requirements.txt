@@ -1,0 +1,26 @@
+# Core dependencies
+openai>=1.0.0
+pyyaml>=6.0
+
+# MLX-Audio for Kokoro TTS (Apple Silicon)
+mlx-audio>=0.1.0
+mlx-core>=0.10.0
+
+# TTS Server
+fastapi>=0.100.0
+uvicorn>=0.23.0
+httpx>=0.25.0
+
+# Audio processing
+scipy>=1.10.0
+numpy>=1.24.0
+
+# Optional: Podcastfy for content extraction
+podcastfy>=0.2.0
+
+# CLI enhancements
+rich>=13.0.0
+
+# GUI - CustomTkinter for modern desktop interface
+customtkinter>=5.2.0
+pillow>=10.0.0
