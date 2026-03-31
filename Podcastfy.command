@@ -1,6 +1,7 @@
 #!/bin/bash
 # Podcastfy Local - Desktop Launcher
 # Double-click this file to launch the GUI application
+# Uses global Python (no virtual environment)
 
 # Project directory - UPDATE THIS PATH if you moved the project
 PROJECT_DIR="/Users/wesleygwn/Documents/Work/Codes/Podcastfy"
@@ -22,44 +23,30 @@ else
     exit 1
 fi
 
-# Check if virtual environment exists and is valid
-if [ -d "venv" ] && [ -f "venv/bin/activate" ]; then
-    echo "✅ Found existing virtual environment"
-    source venv/bin/activate
-else
-    echo "⚠️  Virtual environment not found or incomplete"
-    echo "📦 Setting up for first-time use..."
-    echo ""
-    
-    # Create virtual environment
-    python3 -m venv venv
-    if [ $? -ne 0 ]; then
-        echo "❌ Failed to create virtual environment"
-        echo "Please ensure Python 3 is installed"
-        read -p "Press Enter to exit..."
-        exit 1
-    fi
-    
-    source venv/bin/activate
-    echo "✅ Virtual environment created"
-    
-    # Install dependencies
-    echo "📦 Installing dependencies..."
-    pip install -r requirements.txt
+# Check if dependencies are installed
+echo "🔍 Checking dependencies..."
+python3 -c "import customtkinter" 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "⚠️  Dependencies not installed"
+    echo "📦 Installing dependencies globally..."
+    pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "❌ Failed to install dependencies"
+        echo "Try running: pip3 install -r requirements.txt"
         read -p "Press Enter to exit..."
         exit 1
     fi
     echo "✅ Dependencies installed"
+else
+    echo "✅ Dependencies found"
 fi
 
 echo ""
 echo "🚀 Launching Podcastfy GUI..."
 echo ""
 
-# Launch the GUI
-python gui.py
+# Launch the GUI using global Python
+python3 gui.py
 
 # Keep terminal open if there was an error
 if [ $? -ne 0 ]; then
@@ -67,6 +54,3 @@ if [ $? -ne 0 ]; then
     echo "❌ Application exited with an error"
     read -p "Press Enter to close..."
 fi
-
-# Deactivate when done
-deactivate 2>/dev/null

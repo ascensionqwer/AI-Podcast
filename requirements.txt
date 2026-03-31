@@ -4,7 +4,6 @@ pyyaml>=6.0
 
 # MLX-Audio for Kokoro TTS (Apple Silicon)
 mlx-audio>=0.1.0
-mlx-core>=0.10.0
 
 # TTS Server
 fastapi>=0.100.0
