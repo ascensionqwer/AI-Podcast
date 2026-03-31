@@ -144,9 +144,28 @@ python podcast.py --input ./assets/FSO_Law_Indonesia.md --output ./output/podcas
 
 ---
 
-### Step 8: Create Desktop Launcher (Optional)
+### Step 8: Use the Desktop Launcher
 
-To create a clickable desktop app:
+The project includes a ready-to-use desktop launcher: `Podcastfy.command`
+
+**Option A: Use from Project Folder**
+
+1. Navigate to the project folder in Finder
+2. Double-click `Podcastfy.command`
+3. The GUI will launch automatically
+
+**Option B: Copy to Desktop**
+
+```bash
+# Copy launcher to Desktop
+cp ~/Documents/Work/Codes/Podcastfy/Podcastfy.command ~/Desktop/
+
+# Now you can double-click it from your Desktop
+```
+
+**Option C: Create Alias (Alternative)**
+
+If you prefer a simpler approach:
 
 ```bash
 # Create the launcher script
@@ -162,6 +181,8 @@ chmod +x ~/Desktop/Podcastfy.command
 ```
 
 Now you can double-click `Podcastfy.command` on your Desktop to launch the app!
+
+**Note:** On first run, macOS may ask for permission to run the script. Click "Open" to allow it.
 
 ---
 
