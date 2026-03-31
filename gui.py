@@ -9,12 +9,12 @@ Run with: python gui.py
 import os
 import sys
 import threading
-import webbrowser
+import shutil
 from pathlib import Path
-from datetime import datetime
+from tkinter import filedialog
 
 import customtkinter as ctk
-from PIL import Image, ImageTk
+from PIL import Image
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("dark")
@@ -29,8 +29,8 @@ class PodcastfyApp(ctk.CTk):
         
         # Configure window
         self.title("Podcastfy Local - AI Podcast Generator")
-        self.geometry("800x600")
-        self.minsize(700, 500)
+        self.geometry("900x650")
+        self.minsize(800, 550)
         
         # Get base directory
         self.base_dir = Path(__file__).parent.absolute()
@@ -58,24 +58,31 @@ class PodcastfyApp(ctk.CTk):
         
         # Load existing files
         self._refresh_file_lists()
+        
+        # Bind focus event for auto-refresh
+        self.bind("<FocusIn>", self._on_focus_in)
+    
+    def _on_focus_in(self, event):
+        """Refresh file lists when window gains focus."""
+        self._refresh_file_lists()
     
     def _create_sidebar(self):
         """Create the left sidebar with controls."""
-        self.sidebar = ctk.CTkFrame(self, width=250, corner_radius=0)
+        self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0)
         self.sidebar.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar.grid_rowconfigure(4, weight=1)
+        self.sidebar.grid_rowconfigure(5, weight=1)
         
         # Logo/Title
         self.logo_label = ctk.CTkLabel(
             self.sidebar,
-            text="🎙️ Podcastfy",
-            font=ctk.CTkFont(size=24, weight="bold")
+            text="🎙️ Podcastfy Local",
+            font=ctk.CTkFont(size=22, weight="bold")
         )
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 5))
         
         self.subtitle_label = ctk.CTkLabel(
             self.sidebar,
-            text="Local AI Podcast Generator",
+            text="AI Podcast Generator",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
@@ -95,7 +102,8 @@ class PodcastfyApp(ctk.CTk):
             self.sidebar,
             text="📁 Upload File (.md/.txt)",
             command=self._upload_file,
-            height=40
+            height=40,
+            font=ctk.CTkFont(size=14)
         )
         self.upload_btn.grid(row=3, column=0, padx=20, pady=5)
         
@@ -104,21 +112,22 @@ class PodcastfyApp(ctk.CTk):
             self.sidebar,
             text="No file selected",
             font=ctk.CTkFont(size=11),
-            wraplength=200
+            wraplength=240
         )
         self.selected_file_label.grid(row=4, column=0, padx=20, pady=5)
         
-        # Assets folder button
+        # Assets folder buttons
         self.assets_btn = ctk.CTkButton(
             self.sidebar,
             text="📂 Open Assets Folder",
             command=self._open_assets_folder,
+            height=32,
             fg_color="transparent",
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
-            height=32
+            font=ctk.CTkFont(size=12)
         )
-        self.assets_btn.grid(row=5, column=0, padx=20, pady=5)
+        self.assets_btn.grid(row=5, column=0, padx=20, pady=5, sticky="n")
         
         # Output Section
         self.output_section = ctk.CTkLabel(
@@ -127,14 +136,15 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
-        self.output_section.grid(row=6, column=0, padx=20, pady=(20, 5))
+        self.output_section.grid(row=6, column=0, padx=20, pady=(15, 5))
         
         # Output filename entry
         self.output_entry = ctk.CTkEntry(
             self.sidebar,
             placeholder_text="podcast.wav",
             textvariable=self.output_filename,
-            height=32
+            height=32,
+            font=ctk.CTkFont(size=12)
         )
         self.output_entry.grid(row=7, column=0, padx=20, pady=5)
         
@@ -143,10 +153,11 @@ class PodcastfyApp(ctk.CTk):
             self.sidebar,
             text="📂 Open Output Folder",
             command=self._open_output_folder,
+            height=32,
             fg_color="transparent",
             border_width=2,
             text_color=("gray10", "#DCE4EE"),
-            height=32
+            font=ctk.CTkFont(size=12)
         )
         self.output_btn.grid(row=8, column=0, padx=20, pady=5)
         
@@ -157,7 +168,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
-        self.gen_section.grid(row=9, column=0, padx=20, pady=(20, 5))
+        self.gen_section.grid(row=9, column=0, padx=20, pady=(15, 5))
         
         # Script only checkbox
         self.script_only_var = ctk.StringVar(value="off")
@@ -166,7 +177,8 @@ class PodcastfyApp(ctk.CTk):
             text="Script only (no audio)",
             variable=self.script_only_var,
             onvalue="on",
-            offvalue="off"
+            offvalue="off",
+            font=ctk.CTkFont(size=12)
         )
         self.script_only_cb.grid(row=10, column=0, padx=20, pady=5)
         
@@ -185,7 +197,7 @@ class PodcastfyApp(ctk.CTk):
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(
             self.sidebar,
-            width=200,
+            width=220,
             mode="indeterminate"
         )
         self.progress_bar.grid(row=12, column=0, padx=20, pady=5)
@@ -198,7 +210,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
-        self.version_label.grid(row=13, column=0, padx=20, pady=(20, 10))
+        self.version_label.grid(row=13, column=0, padx=20, pady=(10, 10))
     
     def _create_main_area(self):
         """Create the main content area."""
@@ -208,25 +220,40 @@ class PodcastfyApp(ctk.CTk):
         self.main_frame.grid_columnconfigure(0, weight=1)
         self.main_frame.grid_rowconfigure(1, weight=1)
         
-        # Header
+        # Header with refresh button
+        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, sticky="ew", pady=(0, 10))
+        self.header_frame.grid_columnconfigure(0, weight=1)
+        
         self.header_label = ctk.CTkLabel(
-            self.main_frame,
+            self.header_frame,
             text="Files in Assets Folder",
             font=ctk.CTkFont(size=18, weight="bold")
         )
-        self.header_label.grid(row=0, column=0, sticky="w", pady=(0, 10))
+        self.header_label.grid(row=0, column=0, sticky="w")
+        
+        # Refresh button
+        self.refresh_btn = ctk.CTkButton(
+            self.header_frame,
+            text="🔄 Refresh",
+            command=self._refresh_file_lists,
+            width=100,
+            height=32,
+            font=ctk.CTkFont(size=12)
+        )
+        self.refresh_btn.grid(row=0, column=1, padx=10)
         
         # File list frame
         self.file_list_frame = ctk.CTkScrollableFrame(
             self.main_frame,
-            label_text="Available Input Files"
+            label_text="Available Input Files (click to select)"
         )
         self.file_list_frame.grid(row=1, column=0, sticky="nsew", pady=10)
         
         # Output files frame
         self.output_list_frame = ctk.CTkScrollableFrame(
             self.main_frame,
-            label_text="Generated Podcasts"
+            label_text="Generated Podcasts (click to play)"
         )
         self.output_list_frame.grid(row=2, column=0, sticky="nsew", pady=10)
     
@@ -257,7 +284,7 @@ class PodcastfyApp(ctk.CTk):
     
     def _refresh_file_lists(self):
         """Refresh the file lists in the main area."""
-        # Clear existing buttons
+        # Clear existing widgets
         for widget in self.file_list_frame.winfo_children():
             widget.destroy()
         
@@ -267,33 +294,40 @@ class PodcastfyApp(ctk.CTk):
         # List assets files
         md_files = list(self.assets_dir.glob("*.md"))
         txt_files = list(self.assets_dir.glob("*.txt"))
-        all_input_files = sorted(md_files + txt_files)
+        all_input_files = sorted(md_files + txt_files, key=lambda x: x.name.lower())
         
         if all_input_files:
             for file_path in all_input_files:
+                # Highlight if this is the selected file
+                is_selected = self.selected_file and self.selected_file == file_path
+                btn_text = f"{'✅ ' if is_selected else '📄 '}{file_path.name}"
+                
                 btn = ctk.CTkButton(
                     self.file_list_frame,
-                    text=f"📄 {file_path.name}",
+                    text=btn_text,
                     command=lambda p=file_path: self._select_file(p),
-                    fg_color="transparent",
+                    height=36,
+                    fg_color="#2d4a6f" if is_selected else "transparent",
+                    hover_color="#3d5a7f" if is_selected else "#1a1a2e",
                     border_width=1,
-                    text_color=("gray10", "#DCE4EE"),
+                    text_color="white",
                     anchor="w",
-                    height=32
+                    font=ctk.CTkFont(size=13)
                 )
                 btn.pack(fill="x", pady=2)
         else:
             empty_label = ctk.CTkLabel(
                 self.file_list_frame,
-                text="No .md or .txt files in assets folder",
-                text_color="gray"
+                text="No .md or .txt files in assets folder\n\nClick 'Upload File' or add files to the assets folder",
+                text_color="gray",
+                font=ctk.CTkFont(size=12)
             )
-            empty_label.pack(pady=10)
+            empty_label.pack(pady=20)
         
         # List output files
-        wav_files = sorted(self.output_dir.glob("*.wav"))
-        mp3_files = sorted(self.output_dir.glob("*.mp3"))
-        txt_outputs = sorted(self.output_dir.glob("*.txt"))
+        wav_files = sorted(self.output_dir.glob("*.wav"), key=lambda x: x.name.lower())
+        mp3_files = sorted(self.output_dir.glob("*.mp3"), key=lambda x: x.name.lower())
+        txt_outputs = sorted(self.output_dir.glob("*.txt"), key=lambda x: x.name.lower())
         all_outputs = wav_files + mp3_files + txt_outputs
         
         if all_outputs:
@@ -302,25 +336,26 @@ class PodcastfyApp(ctk.CTk):
                     self.output_list_frame,
                     text=f"🎵 {file_path.name}",
                     command=lambda p=file_path: self._play_output(p),
+                    height=36,
                     fg_color="transparent",
+                    hover_color="#1a1a2e",
                     border_width=1,
-                    text_color=("gray10", "#DCE4EE"),
+                    text_color="white",
                     anchor="w",
-                    height=32
+                    font=ctk.CTkFont(size=13)
                 )
                 btn.pack(fill="x", pady=2)
         else:
             empty_label = ctk.CTkLabel(
                 self.output_list_frame,
-                text="No generated podcasts yet",
-                text_color="gray"
+                text="No generated podcasts yet\n\nSelect a file and click 'Generate Podcast'",
+                text_color="gray",
+                font=ctk.CTkFont(size=12)
             )
-            empty_label.pack(pady=10)
+            empty_label.pack(pady=20)
     
     def _upload_file(self):
         """Open file dialog to upload a file."""
-        from tkinter import filedialog
-        
         file_path = filedialog.askopenfilename(
             title="Select Input File",
             filetypes=[
@@ -332,15 +367,23 @@ class PodcastfyApp(ctk.CTk):
         )
         
         if file_path:
-            # Copy to assets folder if not already there
             source_path = Path(file_path)
+            
+            # Copy to assets folder if not already there
             if source_path.parent != self.assets_dir:
                 dest_path = self.assets_dir / source_path.name
-                import shutil
+                
+                # Check if file already exists
+                if dest_path.exists():
+                    # Ask to overwrite
+                    from tkinter import messagebox
+                    if not messagebox.askyesno("File Exists", f"'{source_path.name}' already exists in assets. Overwrite?"):
+                        return
+                
                 shutil.copy2(file_path, dest_path)
                 self._select_file(dest_path)
                 self._refresh_file_lists()
-                self.status_text.set(f"File copied to assets: {source_path.name}")
+                self.status_text.set(f"✅ File copied: {source_path.name}")
             else:
                 self._select_file(source_path)
     
@@ -349,6 +392,13 @@ class PodcastfyApp(ctk.CTk):
         self.selected_file = file_path
         self.selected_file_label.configure(text=f"✅ {file_path.name}")
         self.status_text.set(f"Selected: {file_path.name}")
+        
+        # Update output filename based on input
+        base_name = file_path.stem
+        self.output_filename.set(f"{base_name}_podcast.wav")
+        
+        # Refresh to show selection highlight
+        self._refresh_file_lists()
     
     def _open_assets_folder(self):
         """Open the assets folder in Finder."""
