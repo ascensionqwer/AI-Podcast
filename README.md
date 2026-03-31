@@ -260,13 +260,20 @@ tts:
 
 # Conversation Style
 conversation:
-  word_count: 2000
   conversation_style:
     - casual
     - informative
   podcast_name: "Local Podcast"
   creativity: 0.7
 ```
+
+**Note:** Podcast length is now **dynamic** based on input content:
+- Short content (< 500 words): ~2x expansion for engaging discussion
+- Medium content (500-2000 words): ~1.5x for thorough coverage
+- Long content (2000-5000 words): ~1.2x for detailed discussion
+- Very long content (> 5000 words): ~1.1x - full coverage, no summarization
+
+The podcast will be as long as needed to cover all content properly!
 
 ---
 
