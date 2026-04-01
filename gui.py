@@ -424,9 +424,10 @@ class PodcastfyApp(ctk.CTk):
         self.selected_file_label.configure(text=f"✅ {file_path.name}")
         self.status_text.set(f"Selected: {file_path.name}")
         
-        # Update output filename based on input
+        # Update output filename based on input and current mode
         base_name = file_path.stem
-        self.output_filename.set(f"{base_name}_podcast.wav")
+        current_mode = self.podcast_mode.get()
+        self.output_filename.set(f"{base_name}_podcast_{current_mode}.wav")
         
         # Refresh to show selection highlight
         self._refresh_file_lists()
