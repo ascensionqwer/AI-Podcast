@@ -101,7 +101,7 @@ class PodcastfyApp(ctk.CTk):
         # Upload button
         self.upload_btn = ctk.CTkButton(
             self.sidebar,
-            text="📁 Upload File (.md/.txt)",
+            text="📁 Upload File (.md/.txt/.pdf/.docx)",
             command=self._upload_file,
             height=40,
             font=ctk.CTkFont(size=14)
@@ -322,10 +322,17 @@ class PodcastfyApp(ctk.CTk):
         for widget in self.output_list_frame.winfo_children():
             widget.destroy()
         
-        # List assets files
+        # List assets files - support multiple document formats
+        from src.doc_converter import SUPPORTED_DOC_EXTENSIONS
+        
         md_files = list(self.assets_dir.glob("*.md"))
         txt_files = list(self.assets_dir.glob("*.txt"))
-        all_input_files = sorted(md_files + txt_files, key=lambda x: x.name.lower())
+        # Add supported document formats
+        doc_files = []
+        for ext in SUPPORTED_DOC_EXTENSIONS:
+            doc_files.extend(list(self.assets_dir.glob(f"*{ext}")))
+        
+        all_input_files = sorted(md_files + txt_files + doc_files, key=lambda x: x.name.lower())
         
         if all_input_files:
             for file_path in all_input_files:
@@ -349,7 +356,7 @@ class PodcastfyApp(ctk.CTk):
         else:
             empty_label = ctk.CTkLabel(
                 self.file_list_frame,
-                text="No .md or .txt files in assets folder\n\nClick 'Upload File' or add files to the assets folder",
+                text="No supported files in assets folder\n\nSupported: .md, .txt, .pdf, .docx, .pptx\nClick 'Upload File' or add files to the assets folder",
                 text_color="gray",
                 font=ctk.CTkFont(size=12)
             )
@@ -392,6 +399,12 @@ class PodcastfyApp(ctk.CTk):
             filetypes=[
                 ("Markdown files", "*.md"),
                 ("Text files", "*.txt"),
+                ("PDF files", "*.pdf"),
+                ("Word documents", "*.docx *.doc"),
+                ("PowerPoint files", "*.pptx *.ppt"),
+                ("Excel files", "*.xlsx *.xls"),
+                ("HTML files", "*.html *.htm"),
+                ("All supported files", "*.md *.txt *.pdf *.docx *.doc *.pptx *.ppt *.xlsx *.xls *.html *.htm"),
                 ("All files", "*.*")
             ],
             initialdir=str(self.assets_dir)

@@ -371,19 +371,19 @@ def load_content(input_path: str) -> str:
     """
     Load content from a file.
     
+    Supports:
+    - Native text formats: .md, .txt, .markdown (read directly)
+    - Document formats: .pdf, .docx, .pptx, .doc, .ppt, .xlsx, .xls, .html (converted to markdown)
+    
     Args:
-        input_path: Path to input file (markdown, text, etc.)
+        input_path: Path to input file
     
     Returns:
-        Content as string
+        Content as string (markdown format)
     """
-    path = Path(input_path)
+    from .doc_converter import load_document_content
     
-    if not path.exists():
-        raise FileNotFoundError(f"Input file not found: {input_path}")
-    
-    with open(path, 'r', encoding='utf-8') as f:
-        return f.read()
+    return load_document_content(input_path)
 
 
 def save_script(script: str, output_path: str):

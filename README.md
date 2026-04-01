@@ -3,8 +3,27 @@
 A unified podcast generation system that runs **100% locally** on Apple Silicon using:
 - **LM Studio** with qwen3.5-122b-a10b for script generation
 - **Kokoro TTS** via MLX-Audio for high-quality voice synthesis
+- **Docling** for document conversion (PDF, DOCX, PPTX, etc.)
 
 ![Podcastfy Local GUI](https://via.placeholder.com/800x400?text=Podcastfy+Local+GUI)
+
+---
+
+## 📄 Supported Input Formats
+
+Podcastfy Local now supports a wide range of document formats:
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Markdown | `.md`, `.markdown` | Native format, read directly |
+| Text | `.txt` | Plain text files |
+| PDF | `.pdf` | PDF documents (converted to markdown) |
+| Word | `.docx`, `.doc` | Microsoft Word documents |
+| PowerPoint | `.pptx`, `.ppt` | Microsoft PowerPoint presentations |
+| Excel | `.xlsx`, `.xls` | Microsoft Excel spreadsheets |
+| HTML | `.html`, `.htm` | HTML web pages |
+
+Documents are automatically converted to markdown using [Docling](https://github.com/docling-project/docling) before being processed by the LLM. No intermediate files are saved - the converted content is fed directly to the script generator.
 
 ---
 
@@ -116,6 +135,7 @@ This will install:
 - `openai` - For LM Studio API communication
 - `mlx-audio` - For Kokoro TTS on Apple Silicon
 - `customtkinter` - For the GUI
+- `docling` - For document conversion (PDF, DOCX, PPTX, etc.)
 - And other dependencies
 
 ---
@@ -226,8 +246,9 @@ Podcastfy/
 │   ├── __init__.py
 │   ├── config.py           # Configuration management
 │   ├── generator.py        # Podcast generation logic
+│   ├── doc_converter.py    # Document to markdown converter
 │   └── tts_server.py       # Embedded Kokoro TTS server
-├── assets/                 # Input content files (.md, .txt)
+├── assets/                 # Input content files (.md, .txt, .pdf, .docx, etc.)
 │   └── FSO_Law_Indonesia.md
 └── output/                 # Generated podcasts (.wav, .mp3)
 ```
@@ -339,10 +360,12 @@ Error: Port 8880 already in use
 
 ## 💡 Tips for Best Results
 
-1. **Content Quality** - Well-structured markdown with clear sections produces better podcasts
-2. **Temperature** - Lower (0.5-0.7) for factual, higher (0.8-1.0) for creative content
-3. **Word Count** - 2000 words ≈ 10-15 minutes of audio
-4. **Input Format** - Use markdown headers and bullet points for better structure
+1. **Content Quality** - Well-structured documents with clear sections produce better podcasts
+2. **Document Formats** - PDF, DOCX, and PPTX files are automatically converted to markdown
+3. **Temperature** - Lower (0.5-0.7) for factual, higher (0.8-1.0) for creative content
+4. **Word Count** - 2000 words ≈ 10-15 minutes of audio
+5. **Input Format** - Use markdown headers and bullet points for better structure
+6. **PDF Documents** - Text-based PDFs work best; scanned PDFs may need OCR preprocessing
 
 ---
 
