@@ -523,10 +523,13 @@ class PodcastfyApp(ctk.CTk):
             # Override podcast mode based on GUI selection
             config.conversation.podcast_mode = self.podcast_mode.get()
             
-            # Get output path
+            # Get output path with mode suffix
             output_name = self.output_filename.get()
-            if not output_name.endswith(('.wav', '.mp3')):
-                output_name += '.wav'
+            # Remove extension if present
+            base_name = output_name.rsplit('.', 1)[0] if '.' in output_name else output_name
+            # Add mode suffix
+            mode_suffix = f"_podcast_{self.podcast_mode.get()}"
+            output_name = f"{base_name}{mode_suffix}.wav"
             output_path = self.output_dir / output_name
             
             # Script only mode
