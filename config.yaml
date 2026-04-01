@@ -25,9 +25,11 @@ tts:
 
 # Conversation Style Configuration
 conversation:
-  # word_count is now DYNAMIC - automatically calculated based on input content length
-  # Short content: 2x expansion | Medium: 1.5x | Long: 1.2x | Very long: 1.1x
-  # The podcast will be as long as needed to cover all content
+  # Podcast mode determines the goal and length:
+  # - "summary": Quick overview of key points (~400 words)
+  # - "analysis": Detailed discussion with insights (~800 words)
+  # - "full": Complete coverage of all content (~1200+ words, dynamic)
+  podcast_mode: "summary"
   conversation_style:
     - casual
     - informative

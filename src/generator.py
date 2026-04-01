@@ -70,39 +70,84 @@ class LLMClient:
             logger.error(f"Cannot connect to LM Studio at {self.config.llm.base_url}: {e}")
             return False
     
-    def _calculate_dynamic_word_count(self, content: str) -> int:
+    def _calculate_word_count(self, content: str, podcast_mode: str) -> int:
         """
-        Calculate dynamic word count based on input content length.
+        Calculate word count based on podcast mode.
         
-        The podcast will be as long as it needs to be to cover all content:
-        - Short content (< 500 words): 2x expansion for engaging discussion
-        - Medium content (500-2000 words): 1.5x for thorough coverage
-        - Long content (2000-5000 words): 1.2x for detailed discussion
-        - Very long content (> 5000 words): 1.1x - full coverage, no summarization
+        Modes:
+        - "summary": Quick overview (~1500 words = ~10 min max) - key points only
+        - "analysis": Detailed discussion (~800 words) - insights and analysis
+        - "full": Complete coverage - covers EVERYTHING, dynamic based on content
         
         Args:
             content: The source content
+            podcast_mode: The podcast generation mode
         
         Returns:
             Calculated target word count for the podcast
         """
-        # Count words in content
         content_words = len(content.split())
         
-        if content_words < 500:
-            # Short content - expand for engaging discussion
-            target = max(800, int(content_words * 2))
-        elif content_words < 2000:
-            # Medium content - thorough coverage
-            target = int(content_words * 1.5)
-        elif content_words < 5000:
-            # Long content - detailed discussion
-            target = int(content_words * 1.2)
-        else:
-            # Very long content - full coverage, no summarization
-            target = int(content_words * 1.1)
+        if podcast_mode == "summary":
+            # Quick overview - ~10 minutes max (~1500 words at 150 wpm speaking rate)
+            return 1500
+        elif podcast_mode == "analysis":
+            # Detailed discussion with insights
+            return 800
+        else:  # "full" mode
+            # Complete coverage - covers EVERYTHING, scales with content
+            if content_words < 500:
+                return max(600, int(content_words * 1.5))
+            elif content_words < 2000:
+                return max(1000, int(content_words * 1.2))
+            elif content_words < 5000:
+                return max(1500, int(content_words * 1.0))
+            else:
+                # For very long content, cover everything but cap reasonably
+                return min(5000, int(content_words * 0.8))
+    
+    def _get_mode_instructions(self, podcast_mode: str) -> str:
+        """
+        Get specific instructions for each podcast mode.
         
-        return target
+        Args:
+            podcast_mode: The podcast generation mode
+        
+        Returns:
+            Mode-specific instructions for the LLM
+        """
+        if podcast_mode == "summary":
+            return """
+SUMMARY MODE - Quick Overview (~10 minutes max):
+- Focus on the most important key points (top 5-10 points)
+- Keep it concise but informative - like a news summary
+- Each speaker should say 2-3 sentences per turn
+- Skip minor details, but cover the main ideas clearly
+- Total output: ~1500 words maximum (~10 min at 150 wpm)
+- Think: "What would a 10-minute podcast highlight reel cover?"
+"""
+        elif podcast_mode == "analysis":
+            return """
+ANALYSIS MODE - Detailed Discussion:
+- Cover the main topics with insights and analysis
+- Discuss implications, context, and significance
+- Include some examples to illustrate points
+- Each speaker can say 2-3 sentences per turn
+- Balance breadth and depth
+- Total output: ~1500 words
+- Think: "What would a thoughtful 10-minute analysis cover?"
+"""
+        else:  # "full"
+            return """
+FULL MODE - Complete Coverage (covers EVERYTHING):
+- Cover ALL content comprehensively - do NOT skip anything
+- Include ALL details, examples, explanations, and nuances
+- Natural conversation flow with transitions between topics
+- Each speaker can have longer turns when needed
+- Every section, point, and detail from the source must be discussed
+- Total output: dynamic length - as long as needed to cover everything
+- Think: "What would a thorough educational podcast episode that covers the entire document look like?"
+"""
     
     def generate_script(self, content: str, conversation_config: dict) -> str:
         """
@@ -116,33 +161,29 @@ class LLMClient:
             Generated script as text
         """
         style = ", ".join(conversation_config.get("conversation_style", ["casual", "informative"]))
-        base_word_count = conversation_config.get("word_count", 2000)
+        podcast_mode = conversation_config.get("podcast_mode", "summary")
         podcast_name = conversation_config.get("podcast_name", "Local Podcast")
         creativity = conversation_config.get("creativity", 0.7)
         user_instructions = conversation_config.get("user_instructions", "")
         
-        # Calculate dynamic word count based on content length
-        word_count = self._calculate_dynamic_word_count(content)
+        # Calculate word count based on mode
+        word_count = self._calculate_word_count(content, podcast_mode)
         content_words = len(content.split())
-        logger.info(f"📊 Content: {content_words} words → Target podcast: {word_count} words")
+        mode_instructions = self._get_mode_instructions(podcast_mode)
+        logger.info(f"📊 Mode: {podcast_mode} | Content: {content_words} words → Target: {word_count} words")
         
-        system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging, natural-sounding 2-person conversation between a 'Host' and an 'Expert'.
+        system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging 2-person conversation between a 'Host' and an 'Expert'.
+
+{mode_instructions}
 
 Guidelines:
 - Style: {style}
-- Target length: approximately {word_count} words
+- Target length: approximately {word_count} words (STRICT LIMIT - do not exceed)
 - Podcast name: {podcast_name}
-- Cover ALL the content comprehensively - do not skip or summarize important details
-- Make it conversational with natural flow, occasional verbal fillers, and genuine curiosity
-- The Host should ask clarifying questions and show interest
-- The Expert should provide detailed, accurate information from the source content
-- Include brief transitions between topics
-- Avoid overly formal language; make it feel like a real conversation
-- The podcast should be as long as needed to cover all the content properly
-
-Format each line as:
-Host: [dialogue]
-Expert: [dialogue]
+- Make it conversational with natural flow
+- The Host should ask questions and show interest
+- The Expert should provide accurate information from the source
+- Format each line as: Host: [dialogue] or Expert: [dialogue]
 
 {f'Additional instructions: {user_instructions}' if user_instructions else ''}"""
         

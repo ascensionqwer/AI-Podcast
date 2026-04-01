@@ -44,6 +44,7 @@ class PodcastfyApp(ctk.CTk):
         # State variables
         self.selected_file = None
         self.output_filename = ctk.StringVar(value="podcast.wav")
+        self.podcast_mode = ctk.StringVar(value="summary")
         self.is_generating = False
         self.status_text = ctk.StringVar(value="Ready - Select a file to begin")
         
@@ -161,6 +162,36 @@ class PodcastfyApp(ctk.CTk):
         )
         self.output_btn.grid(row=8, column=0, padx=20, pady=5)
         
+        # Podcast Mode Section
+        self.mode_section = ctk.CTkLabel(
+            self.sidebar,
+            text="─── Podcast Mode ───",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        self.mode_section.grid(row=9, column=0, padx=20, pady=(15, 5))
+        
+        # Podcast mode dropdown
+        self.mode_dropdown = ctk.CTkOptionMenu(
+            self.sidebar,
+            values=["summary", "analysis", "full"],
+            variable=self.podcast_mode,
+            command=self._on_mode_change,
+            height=32,
+            font=ctk.CTkFont(size=12)
+        )
+        self.mode_dropdown.grid(row=10, column=0, padx=20, pady=5)
+        
+        # Mode description
+        self.mode_desc = ctk.CTkLabel(
+            self.sidebar,
+            text="summary: Quick overview (~400 words)",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+            wraplength=240
+        )
+        self.mode_desc.grid(row=11, column=0, padx=20, pady=(0, 5))
+        
         # Generate Section
         self.gen_section = ctk.CTkLabel(
             self.sidebar,
@@ -168,7 +199,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
-        self.gen_section.grid(row=9, column=0, padx=20, pady=(15, 5))
+        self.gen_section.grid(row=12, column=0, padx=20, pady=(10, 5))
         
         # Script only checkbox
         self.script_only_var = ctk.StringVar(value="off")
@@ -180,7 +211,7 @@ class PodcastfyApp(ctk.CTk):
             offvalue="off",
             font=ctk.CTkFont(size=12)
         )
-        self.script_only_cb.grid(row=10, column=0, padx=20, pady=5)
+        self.script_only_cb.grid(row=13, column=0, padx=20, pady=5)
         
         # Generate button
         self.generate_btn = ctk.CTkButton(
@@ -192,7 +223,7 @@ class PodcastfyApp(ctk.CTk):
             fg_color="#1f6aa5",
             hover_color="#144870"
         )
-        self.generate_btn.grid(row=11, column=0, padx=20, pady=10)
+        self.generate_btn.grid(row=14, column=0, padx=20, pady=10)
         
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(
@@ -200,7 +231,7 @@ class PodcastfyApp(ctk.CTk):
             width=220,
             mode="indeterminate"
         )
-        self.progress_bar.grid(row=12, column=0, padx=20, pady=5)
+        self.progress_bar.grid(row=15, column=0, padx=20, pady=5)
         self.progress_bar.set(0)
         
         # Version label
@@ -210,7 +241,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
-        self.version_label.grid(row=13, column=0, padx=20, pady=(10, 10))
+        self.version_label.grid(row=16, column=0, padx=20, pady=(10, 10))
     
     def _create_main_area(self):
         """Create the main content area."""
@@ -471,6 +502,15 @@ class PodcastfyApp(ctk.CTk):
         )
         thread.start()
     
+    def _on_mode_change(self, choice: str):
+        """Handle podcast mode selection change."""
+        descriptions = {
+            "summary": "summary: Quick overview (~10 min max)",
+            "analysis": "analysis: Detailed discussion (~5 min)",
+            "full": "full: Complete coverage (covers everything)"
+        }
+        self.mode_desc.configure(text=descriptions.get(choice, ""))
+    
     def _generation_thread(self):
         """Background thread for podcast generation."""
         try:
@@ -479,6 +519,9 @@ class PodcastfyApp(ctk.CTk):
             
             # Load config
             config = load_config(str(self.base_dir / "config.yaml"))
+            
+            # Override podcast mode based on GUI selection
+            config.conversation.podcast_mode = self.podcast_mode.get()
             
             # Get output path
             output_name = self.output_filename.get()
@@ -489,8 +532,9 @@ class PodcastfyApp(ctk.CTk):
             # Script only mode
             script_only = self.script_only_var.get() == "on"
             
-            # Update status
-            self.after(0, lambda: self.status_text.set("🧠 Generating script with LLM..."))
+            # Update status with mode info
+            mode_name = self.podcast_mode.get().capitalize()
+            self.after(0, lambda: self.status_text.set(f"🧠 Generating {mode_name} podcast script..."))
             
             # Generate
             generator = PodcastGenerator(config)
@@ -504,7 +548,7 @@ class PodcastfyApp(ctk.CTk):
             self.after(0, lambda: self._generation_complete(True, str(output_path)))
             
         except Exception as e:
-            self.after(0, lambda: self._generation_complete(False, str(e)))
+            self.after(0, lambda exc=str(e): self._generation_complete(False, exc))
     
     def _generation_complete(self, success: bool, message: str):
         """Handle generation completion."""
