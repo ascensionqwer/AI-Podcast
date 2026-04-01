@@ -43,7 +43,7 @@ class PodcastfyApp(ctk.CTk):
         
         # State variables
         self.selected_file = None
-        self.output_filename = ctk.StringVar(value="podcast.wav")
+        self.output_filename = ctk.StringVar(value="podcast_summary.wav")
         self.podcast_mode = ctk.StringVar(value="summary")
         self.is_generating = False
         self.status_text = ctk.StringVar(value="Ready - Select a file to begin")
@@ -513,15 +513,15 @@ class PodcastfyApp(ctk.CTk):
         
         # Update output filename with mode suffix
         current_name = self.output_filename.get()
-        # Remove any existing mode suffix
-        base_name = current_name
-        for suffix in ["_podcast_summary", "_podcast_analysis", "_podcast_full"]:
-            if suffix in base_name:
-                base_name = base_name.replace(suffix, "")
         # Remove extension
-        base_name = base_name.rsplit('.', 1)[0] if '.' in base_name else base_name
+        base_name = current_name.rsplit('.', 1)[0] if '.' in current_name else current_name
+        # Remove any existing mode suffix
+        for suffix in ["_summary", "_analysis", "_full"]:
+            if base_name.endswith(suffix):
+                base_name = base_name[:-len(suffix)]
+                break
         # Add new mode suffix
-        new_name = f"{base_name}_podcast_{choice}.wav"
+        new_name = f"{base_name}_{choice}.wav"
         self.output_filename.set(new_name)
     
     def _generation_thread(self):
@@ -536,13 +536,10 @@ class PodcastfyApp(ctk.CTk):
             # Override podcast mode based on GUI selection
             config.conversation.podcast_mode = self.podcast_mode.get()
             
-            # Get output path with mode suffix
+            # Get output path (filename already has mode suffix from _on_mode_change)
             output_name = self.output_filename.get()
-            # Remove extension if present
-            base_name = output_name.rsplit('.', 1)[0] if '.' in output_name else output_name
-            # Add mode suffix
-            mode_suffix = f"_podcast_{self.podcast_mode.get()}"
-            output_name = f"{base_name}{mode_suffix}.wav"
+            if not output_name.endswith(('.wav', '.mp3')):
+                output_name += '.wav'
             output_path = self.output_dir / output_name
             
             # Script only mode
