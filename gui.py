@@ -32,8 +32,8 @@ class PodcastfyApp(ctk.CTk):
         self.geometry("900x650")
         self.minsize(800, 550)
         
-        # Get base directory
-        self.base_dir = Path(__file__).parent.absolute()
+        # Get base directory from current working directory (pwd)
+        self.base_dir = Path.cwd()
         self.assets_dir = self.base_dir / "assets"
         self.output_dir = self.base_dir / "output"
         
