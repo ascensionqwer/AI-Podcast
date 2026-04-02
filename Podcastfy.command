@@ -3,25 +3,16 @@
 # Double-click this file to launch the GUI application
 # Uses global Python (no virtual environment)
 
-# Project directory - UPDATE THIS PATH if you moved the project
-PROJECT_DIR="/Users/wesleygwn/Documents/Work/Codes/Podcastfy"
+# Get the directory where this script is located (dynamic path)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo "🎙️ Podcastfy Local - AI Podcast Generator"
 echo "=========================================="
 echo ""
 
-# Navigate to the project directory
-if [ -d "$PROJECT_DIR" ]; then
-    cd "$PROJECT_DIR"
-    echo "📂 Project directory: $PROJECT_DIR"
-else
-    echo "❌ Project not found at: $PROJECT_DIR"
-    echo ""
-    echo "Please update the PROJECT_DIR path in this script"
-    echo "or clone the project to the expected location."
-    read -p "Press Enter to close..."
-    exit 1
-fi
+# Navigate to the script directory (project root)
+cd "$SCRIPT_DIR"
+echo "📂 Project directory: $SCRIPT_DIR"
 
 # Check if dependencies are installed
 echo "🔍 Checking dependencies..."
