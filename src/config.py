@@ -52,6 +52,7 @@ class ConversationConfig:
     conversation_style: List[str] = field(default_factory=lambda: ["casual", "informative"])
     podcast_name: str = "Local Podcast"
     creativity: float = 0.7
+    podcast_mode: str = "summary"
     user_instructions: str = ""
 
 

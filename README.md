@@ -215,10 +215,12 @@ Now you can double-click `Podcastfy.command` on your Desktop to launch the app!
 1. **Start LM Studio** - Ensure the server is running (port 1234)
 2. **Launch Podcastfy** - Run `python gui.py` or double-click the desktop launcher
 3. **Select Input File** - Click on a file in the Assets list or upload a new one
-4. **Set Output Name** - Enter a filename (e.g., `my_podcast.wav`)
-5. **Click Generate** - Press the "🚀 Generate Podcast" button
-6. **Wait for Completion** - The progress bar shows generation status
-7. **Play Output** - Click on the generated file in the Output list
+4. **Choose Podcast Mode** - Select from Summary, Analysis, or Full mode
+5. **Custom Instructions (Analysis Mode)** - When using Analysis mode, a text box appears where you can optionally enter specific focus areas or instructions for the podcast discussion
+6. **Set Output Name** - Enter a filename (e.g., `my_podcast.wav`)
+7. **Click Generate** - Press the "🚀 Generate Podcast" button
+8. **Wait for Completion** - The progress bar shows generation status
+9. **Play Output** - Click on the generated file in the Output list
 
 ### Using Command Line
 
@@ -288,7 +290,37 @@ conversation:
     - informative
   podcast_name: "Local Podcast"
   creativity: 0.7
+  podcast_mode: "summary"  # Options: summary, analysis, full
+  user_instructions: ""    # Custom instructions for analysis mode
 ```
+
+---
+
+## 🎙️ Podcast Modes
+
+| Mode | Description | Length | Use Case |
+|------|-------------|--------|----------|
+| **Summary** | Quick overview of key points | ~10 min | Get a fast summary of the main ideas |
+| **Analysis** | Detailed discussion with insights | ~5 min | Deep dive with custom focus areas |
+| **Full** | Complete coverage of all content | Dynamic | Comprehensive coverage of entire document |
+
+### Custom Instructions (Analysis Mode)
+
+When using **Analysis mode** in the GUI, a text box appears where you can optionally enter custom instructions to guide the podcast discussion. This allows you to:
+
+- **Focus on specific topics** - e.g., "Focus on the financial implications"
+- **Set discussion tone** - e.g., "Make it more critical and analytical"
+- **Highlight specific sections** - e.g., "Emphasize the methodology section"
+- **Add context** - e.g., "Discuss this in context of recent market trends"
+
+**Example custom instructions:**
+```
+Focus on the legal implications and discuss how this affects small businesses
+```
+
+The instructions are passed directly to the LLM and influence how the podcast script is generated.
+
+---
 
 **Note:** Podcast length is now **dynamic** based on input content:
 - Short content (< 500 words): ~2x expansion for engaging discussion

@@ -45,6 +45,7 @@ class PodcastfyApp(ctk.CTk):
         self.selected_file = None
         self.output_filename = ctk.StringVar(value="podcast_summary.wav")
         self.podcast_mode = ctk.StringVar(value="summary")
+        self.user_instructions = ctk.StringVar(value="")
         self.is_generating = False
         self.status_text = ctk.StringVar(value="Ready - Select a file to begin")
         
@@ -192,6 +193,27 @@ class PodcastfyApp(ctk.CTk):
         )
         self.mode_desc.grid(row=11, column=0, padx=20, pady=(0, 5))
         
+        # Custom Instructions Section (for analysis mode)
+        self.instructions_label = ctk.CTkLabel(
+            self.sidebar,
+            text="─── Custom Instructions ───",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        self.instructions_label.grid(row=12, column=0, padx=20, pady=(10, 5))
+        
+        # Instructions text box
+        self.instructions_textbox = ctk.CTkTextbox(
+            self.sidebar,
+            height=60,
+            font=ctk.CTkFont(size=11),
+            border_width=1,
+            border_color="gray30"
+        )
+        self.instructions_textbox.grid(row=13, column=0, padx=20, pady=5)
+        self.instructions_textbox.insert("1.0", "Optional: Enter specific focus areas or instructions for analysis mode...")
+        self.instructions_textbox.grid_remove()  # Hidden by default
+        
         # Generate Section
         self.gen_section = ctk.CTkLabel(
             self.sidebar,
@@ -199,7 +221,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
-        self.gen_section.grid(row=12, column=0, padx=20, pady=(10, 5))
+        self.gen_section.grid(row=14, column=0, padx=20, pady=(10, 5))
         
         # Script only checkbox
         self.script_only_var = ctk.StringVar(value="off")
@@ -211,7 +233,7 @@ class PodcastfyApp(ctk.CTk):
             offvalue="off",
             font=ctk.CTkFont(size=12)
         )
-        self.script_only_cb.grid(row=13, column=0, padx=20, pady=5)
+        self.script_only_cb.grid(row=15, column=0, padx=20, pady=5)
         
         # Generate button
         self.generate_btn = ctk.CTkButton(
@@ -223,7 +245,7 @@ class PodcastfyApp(ctk.CTk):
             fg_color="#1f6aa5",
             hover_color="#144870"
         )
-        self.generate_btn.grid(row=14, column=0, padx=20, pady=10)
+        self.generate_btn.grid(row=16, column=0, padx=20, pady=10)
         
         # Progress bar
         self.progress_bar = ctk.CTkProgressBar(
@@ -231,7 +253,7 @@ class PodcastfyApp(ctk.CTk):
             width=220,
             mode="indeterminate"
         )
-        self.progress_bar.grid(row=15, column=0, padx=20, pady=5)
+        self.progress_bar.grid(row=17, column=0, padx=20, pady=5)
         self.progress_bar.set(0)
         
         # Version label
@@ -241,7 +263,7 @@ class PodcastfyApp(ctk.CTk):
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
-        self.version_label.grid(row=16, column=0, padx=20, pady=(10, 10))
+        self.version_label.grid(row=18, column=0, padx=20, pady=(10, 10))
     
     def _create_main_area(self):
         """Create the main content area."""
@@ -525,6 +547,24 @@ class PodcastfyApp(ctk.CTk):
         }
         self.mode_desc.configure(text=descriptions.get(choice, ""))
         
+        # Show/hide instructions textbox based on mode
+        if choice == "analysis":
+            self.instructions_label.grid(row=12, column=0, padx=20, pady=(10, 5))
+            self.instructions_textbox.grid(row=13, column=0, padx=20, pady=5)
+            self.gen_section.grid(row=14, column=0, padx=20, pady=(10, 5))
+            self.script_only_cb.grid(row=15, column=0, padx=20, pady=5)
+            self.generate_btn.grid(row=16, column=0, padx=20, pady=10)
+            self.progress_bar.grid(row=17, column=0, padx=20, pady=5)
+            self.version_label.grid(row=18, column=0, padx=20, pady=(10, 10))
+        else:
+            self.instructions_label.grid_remove()
+            self.instructions_textbox.grid_remove()
+            self.gen_section.grid(row=12, column=0, padx=20, pady=(10, 5))
+            self.script_only_cb.grid(row=13, column=0, padx=20, pady=5)
+            self.generate_btn.grid(row=14, column=0, padx=20, pady=10)
+            self.progress_bar.grid(row=15, column=0, padx=20, pady=5)
+            self.version_label.grid(row=16, column=0, padx=20, pady=(10, 10))
+        
         # Update output filename with mode suffix
         current_name = self.output_filename.get()
         # Remove extension
@@ -549,6 +589,16 @@ class PodcastfyApp(ctk.CTk):
             
             # Override podcast mode based on GUI selection
             config.conversation.podcast_mode = self.podcast_mode.get()
+            
+            # Get user instructions from textbox (for analysis mode)
+            current_mode = self.podcast_mode.get()
+            if current_mode == "analysis":
+                instructions = self.instructions_textbox.get("1.0", "end-1c").strip()
+                # Ignore placeholder text
+                if instructions and not instructions.startswith("Optional:"):
+                    config.conversation.user_instructions = instructions
+                else:
+                    config.conversation.user_instructions = ""
             
             # Get output path (filename already has mode suffix from _on_mode_change)
             output_name = self.output_filename.get()
