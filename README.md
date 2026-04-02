@@ -98,7 +98,7 @@ python3 --version
 ### Step 4: Clone the Project
 
 ```bash
-# Navigate to your preferred location
+# Navigate to your preferred location (example)
 cd ~/Documents/Work/Codes
 
 # Clone the repository
@@ -177,21 +177,23 @@ The project includes a ready-to-use desktop launcher: `Podcastfy.command`
 **Option B: Copy to Desktop**
 
 ```bash
-# Copy launcher to Desktop
-cp ~/Documents/Work/Codes/Podcastfy/Podcastfy.command ~/Desktop/
+# Copy launcher to Desktop (adjust path to your project location)
+cp ./Podcastfy.command ~/Desktop/
 
 # Now you can double-click it from your Desktop
 ```
 
 **Option C: Create Alias (Alternative)**
 
-If you prefer a simpler approach:
+If you prefer a simpler approach, create a launcher that navigates to your project:
 
 ```bash
-# Create the launcher script
+# Create the launcher script (adjust path to your project location)
 cat > ~/Desktop/Podcastfy.command << 'EOF'
 #!/bin/bash
-cd ~/Documents/Work/Codes/Podcastfy
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
 source venv/bin/activate
 python gui.py
 EOF
@@ -372,7 +374,8 @@ Error: Port 8880 already in use
 ## 🔄 Updating the Project
 
 ```bash
-cd ~/Documents/Work/Codes/Podcastfy
+# Navigate to your project directory (adjust path as needed)
+cd Podcastfy
 git pull origin main
 source venv/bin/activate
 pip install -r requirements.txt --upgrade
