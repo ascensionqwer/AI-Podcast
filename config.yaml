@@ -1,27 +1,60 @@
 # Podcastfy Local Configuration
-# Unified config for LM Studio + Kokoro TTS
+# Unified config for LM Studio + TTS (Kokoro or Voice Cloning)
+#
+# To switch TTS provider, change tts.provider to:
+#   - "kokoro" for Kokoro TTS (built-in voices)
+#   - "voice_clone" for Qwen3-TTS voice cloning (custom cloned voices)
 
 # LLM Configuration - LM Studio (OpenAI-compatible API)
 llm:
   model: "qwen3.5-122b-a10b"
   base_url: "http://localhost:1234/v1"
   api_key: "lm-studio"
-  temperature: 0.7
+  temperature: 0.6
   max_tokens: 262144
 
-# TTS Configuration - Kokoro via MLX-Audio
+# TTS Configuration
+# Change 'provider' to switch between Kokoro and Voice Cloning
 tts:
-  provider: "kokoro"
-  model: "mlx-community/Kokoro-82M-bf16"
-  server:
-    host: "127.0.0.1"
-    port: 8880
-    auto_start: true  # Automatically start embedded server if not running
-  voices:
-    speaker_1: "af_bella"  # Female voice (Host)
-    speaker_2: "am_adam"    # Male voice (Expert)
+  provider: "voice_clone"  # Options: "kokoro" or "voice_clone"
+  
+  # --- Kokoro TTS Settings (used when provider="kokoro") ---
+  kokoro:
+    model: "mlx-community/Kokoro-82M-bf16"
+    server:
+      host: "127.0.0.1"
+      port: 8880
+      auto_start: true
+    voices:
+      speaker_1: "af_bella"  # Female voice (Host)
+      speaker_2: "am_adam"    # Male voice (Expert)
+  
+  # --- Voice Cloning Settings (used when provider="voice_clone") ---
+  voice_clone:
+    model: "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    device: "auto"  # auto, cuda:0, mps, cpu
+    dtype: "bfloat16"
+    attention: "flash_attention_2"
+    max_tokens: 2048
+    # Voice profiles (copied from Voice_Cloning/Profile)
+    voices:
+      speaker_1:  # Female voice (Host) - Lana profile
+        profile: "Lana"
+        ref_audio: "Profile/Lana/Lana.wav"
+        ref_text: "As the customer leaves, we catch sight of a stern-faced Chinese lady standing near the back of the counter area, critically observing the employee. This is IRENE, the joint's founding mother. She suddenly straightens, eyes locked on a group of bulky man approaching the counter entrance, their backs to us. Irene gestures them forward and swings open a door behind her."
+        language: "English"
+      speaker_2:  # Male voice (Expert) - Wesley profile
+        profile: "Wesley"
+        ref_audio: "Profile/Wesley/Wesley.wav"
+        ref_text: "Session 1, Power Beaming and Wireless Power Transfer Roadmap for Power Laser Beaming Technology Advancements Keynote Presentation Expanding the playability of high-powered long-range laser power beaming demands improvements across several key performance metrics. Most notably efficiency, transmission rains and system scalability. In this paper, we identify emerging and potentially use cases spanning space airborne"
+        language: "English"
+  
+  # Common settings
   sample_rate: 24000
   output_format: "wav"  # wav or mp3
+  # Conversation flow settings (natural pauses between dialogue)
+  pause_between_segments: 0.5  # Seconds of silence between each dialogue line
+  pause_on_speaker_change: 1.0  # Extra pause when speaker changes (turn-taking delay)
 
 # Conversation Style Configuration
 conversation:
@@ -33,7 +66,7 @@ conversation:
   conversation_style:
     - casual
     - informative
-  podcast_name: "Local Podcast"
+  podcast_name: "AI Podcast"
   creativity: 0.7
   user_instructions: ""  # Optional: Add custom instructions for the AI hosts
 

@@ -25,24 +25,78 @@ class LLMConfig:
 
 @dataclass
 class TTSServerConfig:
-    """TTS server configuration."""
+    """TTS server configuration for Kokoro."""
     host: str = "127.0.0.1"
     port: int = 8880
     auto_start: bool = True
 
 
 @dataclass
-class TTSConfig:
-    """TTS configuration settings."""
-    provider: str = "kokoro"
+class KokoroVoiceConfig:
+    """Kokoro voice configuration."""
+    speaker_1: str = "af_bella"  # Female voice (Host)
+    speaker_2: str = "am_adam"    # Male voice (Expert)
+
+
+@dataclass
+class KokoroConfig:
+    """Kokoro TTS configuration."""
     model: str = "mlx-community/Kokoro-82M-bf16"
     server: TTSServerConfig = field(default_factory=TTSServerConfig)
-    voices: dict = field(default_factory=lambda: {
-        "speaker_1": "af_bella",
-        "speaker_2": "am_adam"
-    })
+    voices: KokoroVoiceConfig = field(default_factory=KokoroVoiceConfig)
+
+
+@dataclass
+class VoiceCloneVoiceProfile:
+    """Voice profile for voice cloning."""
+    profile: str = ""
+    ref_audio: str = ""
+    ref_text: str = ""
+    language: str = "English"
+
+
+@dataclass
+class VoiceCloneVoicesConfig:
+    """Voice cloning voices configuration."""
+    speaker_1: VoiceCloneVoiceProfile = field(default_factory=VoiceCloneVoiceProfile)
+    speaker_2: VoiceCloneVoiceProfile = field(default_factory=VoiceCloneVoiceProfile)
+
+
+@dataclass
+class VoiceCloneConfig:
+    """Voice cloning (Qwen3-TTS) configuration."""
+    model: str = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    device: str = "auto"
+    dtype: str = "bfloat16"
+    attention: str = "flash_attention_2"
+    max_tokens: int = 2048
+    voices: VoiceCloneVoicesConfig = field(default_factory=VoiceCloneVoicesConfig)
+
+
+@dataclass
+class TTSConfig:
+    """TTS configuration settings."""
+    provider: str = "kokoro"  # Options: "kokoro" or "voice_clone"
+    kokoro: KokoroConfig = field(default_factory=KokoroConfig)
+    voice_clone: VoiceCloneConfig = field(default_factory=VoiceCloneConfig)
     sample_rate: int = 24000
     output_format: str = "wav"
+    # Conversation flow settings
+    pause_between_segments: float = 0.5  # Seconds of silence between dialogue segments
+    pause_on_speaker_change: float = 1.0  # Extra pause when speaker changes (turn-taking)
+    
+    def get_voices(self) -> dict:
+        """Get voice configuration based on current provider."""
+        if self.provider == "voice_clone":
+            return {
+                "speaker_1": self.voice_clone.voices.speaker_1,
+                "speaker_2": self.voice_clone.voices.speaker_2
+            }
+        else:  # kokoro
+            return {
+                "speaker_1": self.kokoro.voices.speaker_1,
+                "speaker_2": self.kokoro.voices.speaker_2
+            }
 
 
 @dataclass
@@ -89,12 +143,59 @@ class Config:
         conversation_data = data.get("conversation", {})
         output_data = data.get("output", {})
         
-        # Parse nested TTS server config
-        server_data = tts_data.get("server", {})
-        server_config = TTSServerConfig(
-            host=server_data.get("host", "127.0.0.1"),
-            port=server_data.get("port", 8880),
-            auto_start=server_data.get("auto_start", True)
+        # Parse Kokoro config
+        kokoro_data = tts_data.get("kokoro", {})
+        kokoro_server_data = kokoro_data.get("server", {})
+        kokoro_server_config = TTSServerConfig(
+            host=kokoro_server_data.get("host", "127.0.0.1"),
+            port=kokoro_server_data.get("port", 8880),
+            auto_start=kokoro_server_data.get("auto_start", True)
+        )
+        kokoro_voices_data = kokoro_data.get("voices", {})
+        kokoro_voices_config = KokoroVoiceConfig(
+            speaker_1=kokoro_voices_data.get("speaker_1", "af_bella"),
+            speaker_2=kokoro_voices_data.get("speaker_2", "am_adam")
+        )
+        kokoro_config = KokoroConfig(
+            model=kokoro_data.get("model", "mlx-community/Kokoro-82M-bf16"),
+            server=kokoro_server_config,
+            voices=kokoro_voices_config
+        )
+        
+        # Parse Voice Clone config
+        voice_clone_data = tts_data.get("voice_clone", {})
+        vc_voices_data = voice_clone_data.get("voices", {})
+        
+        # Parse speaker_1 voice profile
+        speaker_1_data = vc_voices_data.get("speaker_1", {})
+        speaker_1_profile = VoiceCloneVoiceProfile(
+            profile=speaker_1_data.get("profile", ""),
+            ref_audio=speaker_1_data.get("ref_audio", ""),
+            ref_text=speaker_1_data.get("ref_text", ""),
+            language=speaker_1_data.get("language", "English")
+        )
+        
+        # Parse speaker_2 voice profile
+        speaker_2_data = vc_voices_data.get("speaker_2", {})
+        speaker_2_profile = VoiceCloneVoiceProfile(
+            profile=speaker_2_data.get("profile", ""),
+            ref_audio=speaker_2_data.get("ref_audio", ""),
+            ref_text=speaker_2_data.get("ref_text", ""),
+            language=speaker_2_data.get("language", "English")
+        )
+        
+        vc_voices_config = VoiceCloneVoicesConfig(
+            speaker_1=speaker_1_profile,
+            speaker_2=speaker_2_profile
+        )
+        
+        voice_clone_config = VoiceCloneConfig(
+            model=voice_clone_data.get("model", "Qwen/Qwen3-TTS-12Hz-1.7B-Base"),
+            device=voice_clone_data.get("device", "auto"),
+            dtype=voice_clone_data.get("dtype", "bfloat16"),
+            attention=voice_clone_data.get("attention", "flash_attention_2"),
+            max_tokens=voice_clone_data.get("max_tokens", 2048),
+            voices=vc_voices_config
         )
         
         return cls(
@@ -107,17 +208,19 @@ class Config:
             ),
             tts=TTSConfig(
                 provider=tts_data.get("provider", "kokoro"),
-                model=tts_data.get("model", "mlx-community/Kokoro-82M-bf16"),
-                server=server_config,
-                voices=tts_data.get("voices", {"speaker_1": "af_bella", "speaker_2": "am_adam"}),
+                kokoro=kokoro_config,
+                voice_clone=voice_clone_config,
                 sample_rate=tts_data.get("sample_rate", 24000),
-                output_format=tts_data.get("output_format", "wav")
+                output_format=tts_data.get("output_format", "wav"),
+                pause_between_segments=tts_data.get("pause_between_segments", 0.5),
+                pause_on_speaker_change=tts_data.get("pause_on_speaker_change", 1.0)
             ),
             conversation=ConversationConfig(
                 word_count=conversation_data.get("word_count", 2000),
                 conversation_style=conversation_data.get("conversation_style", ["casual", "informative"]),
                 podcast_name=conversation_data.get("podcast_name", "Local Podcast"),
                 creativity=conversation_data.get("creativity", 0.7),
+                podcast_mode=conversation_data.get("podcast_mode", "summary"),
                 user_instructions=conversation_data.get("user_instructions", "")
             ),
             output=OutputConfig(
@@ -138,12 +241,20 @@ class Config:
         if not self.llm.model:
             issues.append("LLM model is not set")
         
-        # Check TTS settings
-        if self.tts.server.port < 1 or self.tts.server.port > 65535:
-            issues.append(f"Invalid TTS server port: {self.tts.server.port}")
-        
-        if not self.tts.voices.get("speaker_1") or not self.tts.voices.get("speaker_2"):
-            issues.append("TTS voices must have both speaker_1 and speaker_2 configured")
+        # Check TTS settings based on provider
+        if self.tts.provider == "kokoro":
+            if self.tts.kokoro.server.port < 1 or self.tts.kokoro.server.port > 65535:
+                issues.append(f"Invalid Kokoro TTS server port: {self.tts.kokoro.server.port}")
+            if not self.tts.kokoro.voices.speaker_1 or not self.tts.kokoro.voices.speaker_2:
+                issues.append("Kokoro TTS voices must have both speaker_1 and speaker_2 configured")
+        elif self.tts.provider == "voice_clone":
+            vc_voices = self.tts.voice_clone.voices
+            if not vc_voices.speaker_1.ref_audio or not vc_voices.speaker_2.ref_audio:
+                issues.append("Voice clone TTS voices must have ref_audio configured for both speakers")
+            if not vc_voices.speaker_1.ref_text or not vc_voices.speaker_2.ref_text:
+                issues.append("Voice clone TTS voices must have ref_text configured for both speakers")
+        else:
+            issues.append(f"Unknown TTS provider: {self.tts.provider}. Use 'kokoro' or 'voice_clone'")
         
         # Check output directory
         output_path = Path(self.output.directory)
