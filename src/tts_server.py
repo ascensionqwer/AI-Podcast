@@ -158,6 +158,9 @@ def create_tts_app(model_name: str = "mlx-community/Kokoro-82M-bf16"):
             audio = generate_audio(text, voice, model_name)
             wav_bytes = audio_to_wav_bytes(audio)
             
+            # Log audio size for debugging
+            logger.info(f"TTS: Generated {len(wav_bytes)} bytes for text: '{text[:50]}...'")
+            
             return Response(
                 content=wav_bytes,
                 media_type="audio/wav",

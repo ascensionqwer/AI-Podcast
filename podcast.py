@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Podcastfy Local - Unified podcast generation CLI
-Uses LM Studio (qwen3.5-122b-a10b) + Kokoro TTS for 100% local podcast generation.
+Uses LM Studio (any LLM) + Kokoro TTS for 100% local podcast generation.
 
 Usage:
     python podcast.py --input ./assets/article.md --output ./output/podcast.wav
@@ -202,7 +202,7 @@ Examples:
     except RuntimeError as e:
         console.print(f"\n[red]Error: {e}[/red]")
         console.print("\n[yellow]Tips:[/yellow]")
-        console.print("  1. Ensure LM Studio is running with qwen3.5-122b-a10b loaded")
+        console.print("  1. Ensure LM Studio is running with any LLM loaded")
         console.print("  2. Check that LM Studio's server is enabled (port 1234)")
         console.print("  3. Verify Kokoro model is available")
         sys.exit(1)

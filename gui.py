@@ -541,9 +541,9 @@ class PodcastfyApp(ctk.CTk):
     def _on_mode_change(self, choice: str):
         """Handle podcast mode selection change."""
         descriptions = {
-            "summary": "summary: Quick overview (~10 min max)",
-            "analysis": "analysis: Detailed discussion (~5 min)",
-            "full": "full: Complete coverage (covers everything)"
+            "summary": "summary: Comprehensive overview (~17 min)",
+            "analysis": "analysis: Deep dive discussion (~25+ min)",
+            "full": "full: Exhaustive coverage (in-depth)"
         }
         self.mode_desc.configure(text=descriptions.get(choice, ""))
         

@@ -263,6 +263,82 @@ Podcastfy/
 
 Edit `config.yaml` to customize settings:
 
+### TTS Provider Selection
+
+You can choose between two TTS providers by changing `tts.provider`:
+
+- **`kokoro`** - Built-in Kokoro TTS voices (fast, no setup required)
+- **`voice_clone`** - Custom cloned voices using Qwen3-TTS (requires reference audio)
+
+```yaml
+# TTS Configuration
+tts:
+  provider: "voice_clone"  # Options: "kokoro" or "voice_clone"
+```
+
+### Kokoro TTS Configuration (provider="kokoro")
+
+```yaml
+tts:
+  provider: "kokoro"
+  kokoro:
+    model: "mlx-community/Kokoro-82M-bf16"
+    server:
+      host: "127.0.0.1"
+      port: 8880
+      auto_start: true
+    voices:
+      speaker_1: "af_bella"  # Female voice (Host)
+      speaker_2: "am_adam"    # Male voice (Expert)
+```
+
+### Voice Cloning Configuration (provider="voice_clone")
+
+Voice cloning uses Qwen3-TTS to clone voices from reference audio samples. Place your voice profiles in the `Profile/` directory.
+
+```yaml
+tts:
+  provider: "voice_clone"
+  voice_clone:
+    model: "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    device: "auto"  # auto, cuda:0, mps, cpu
+    dtype: "bfloat16"
+    attention: "flash_attention_2"
+    max_tokens: 2048
+    voices:
+      speaker_1:  # Female voice (Host)
+        profile: "Lana"
+        ref_audio: "Profile/Lana/Lana.wav"
+        ref_text: "The transcript of the reference audio..."
+        language: "English"
+      speaker_2:  # Male voice (Expert)
+        profile: "Goat"
+        ref_audio: "Profile/Goat/Goat.wav"
+        ref_text: "The transcript of the reference audio..."
+        language: "English"
+```
+
+### Voice Profile Setup
+
+To use voice cloning, you need reference audio files and their transcripts:
+
+1. **Create a profile directory**: `Profile/<ProfileName>/`
+2. **Add reference audio**: `<ProfileName>.wav` (5-30 seconds of clear speech)
+3. **Add transcript**: `<ProfileName>.txt` (exact text spoken in the audio)
+
+Example structure:
+```
+Profile/
+├── Lana/
+│   ├── Lana.wav    # Reference audio
+│   └── Lana.txt    # Transcript
+├── Goat/
+│   ├── Goat.wav
+│   └── Goat.txt
+```
+
+### Full Configuration Example
+
 ```yaml
 # LLM Configuration
 llm:
@@ -271,17 +347,10 @@ llm:
   temperature: 0.7
   max_tokens: 262144
 
-# TTS Configuration
+# TTS Configuration (change provider to switch)
 tts:
-  provider: "kokoro"
-  model: "mlx-community/Kokoro-82M-bf16"
-  server:
-    host: "127.0.0.1"
-    port: 8880
-    auto_start: true
-  voices:
-    speaker_1: "af_bella"  # Female voice (Host)
-    speaker_2: "am_adam"    # Male voice (Expert)
+  provider: "voice_clone"  # or "kokoro"
+  # ... provider-specific settings ...
 
 # Conversation Style
 conversation:
@@ -334,12 +403,32 @@ The podcast will be as long as needed to cover all content properly!
 
 ## 🎙️ Available Voices
 
+### Kokoro TTS Voices (provider="kokoro")
+
 | Voice ID | Description |
 |----------|-------------|
 | `af_bella` | Female, natural and warm |
 | `af_sarah` | Female, professional |
 | `am_adam` | Male, clear and articulate |
 | `am_michael` | Male, deeper tone |
+
+### Voice Cloning Profiles (provider="voice_clone")
+
+Voice cloning uses custom voice profiles from the `Profile/` directory. Each profile contains:
+- Reference audio file (5-30 seconds of clear speech)
+- Transcript of the reference audio
+
+**Included Profiles:**
+| Profile | Description | Use Case |
+|---------|-------------|----------|
+| `Lana` | Female voice | Host/Speaker 1 |
+| `Goat` | Male voice, authoritative | Expert/Speaker 2 |
+| `Wesley` | Custom voice | User-defined |
+
+**Creating Custom Profiles:**
+1. Record 5-30 seconds of clear speech
+2. Create a transcript of exactly what was spoken
+3. Place files in `Profile/<YourName>/` directory
 
 ---
 
@@ -367,6 +456,36 @@ Error: Failed to load Kokoro model
 1. Ensure internet connection for first download
 2. Model is cached locally after first download (~82MB)
 3. Check MLX-Audio installation: `pip install mlx-audio --upgrade`
+
+### Voice Cloning Model Not Found
+
+```
+Error: Failed to load Qwen3-TTS model
+```
+
+**Solution:**
+1. Ensure internet connection for first download
+2. Model is cached locally after first download (~1.7GB)
+3. Check qwen-tts installation: `pip install qwen-tts --upgrade`
+
+### Voice Cloning Reference Audio Not Found
+
+```
+Error: Reference audio not found: Profile/Name/Name.wav
+```
+
+**Solution:**
+1. Check that the profile directory exists in `Profile/`
+2. Verify the audio file has the correct name (e.g., `Lana.wav`)
+3. Ensure the path in `config.yaml` matches the actual file location
+
+### Memory Issues with Voice Cloning
+
+Voice cloning requires more memory than Kokoro. If you encounter memory errors:
+
+1. Use `device: "cpu"` in config.yaml (slower but more stable)
+2. Use `dtype: "float16"` instead of `bfloat16`
+3. Close other applications to free memory
 
 ### Python Virtual Environment Issues
 

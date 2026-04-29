@@ -6,6 +6,7 @@ Handles the complete pipeline from content to podcast audio.
 import logging
 import re
 import time
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, List, Tuple
@@ -75,8 +76,8 @@ class LLMClient:
         Calculate word count based on podcast mode.
         
         Modes:
-        - "summary": Quick overview (~1500 words = ~10 min max) - key points only
-        - "analysis": Detailed discussion (~800 words) - insights and analysis
+        - "summary": Quick overview (~2500 words = ~17 min) - key points with context
+        - "analysis": Detailed discussion (~4000 words) - deep insights and analysis
         - "full": Complete coverage - covers EVERYTHING, dynamic based on content
         
         Args:
@@ -89,22 +90,22 @@ class LLMClient:
         content_words = len(content.split())
         
         if podcast_mode == "summary":
-            # Quick overview - ~10 minutes max (~1500 words at 150 wpm speaking rate)
-            return 1500
+            # Quick overview with substance - ~17 minutes (~2500 words at 150 wpm speaking rate)
+            return 2500
         elif podcast_mode == "analysis":
-            # Detailed discussion with insights
-            return 800
+            # Deep discussion with thorough insights and examples
+            return 4000
         else:  # "full" mode
             # Complete coverage - covers EVERYTHING, scales with content
             if content_words < 500:
-                return max(600, int(content_words * 1.5))
+                return max(1000, int(content_words * 2.0))
             elif content_words < 2000:
-                return max(1000, int(content_words * 1.2))
+                return max(2000, int(content_words * 1.5))
             elif content_words < 5000:
-                return max(1500, int(content_words * 1.0))
+                return max(3000, int(content_words * 1.2))
             else:
-                # For very long content, cover everything but cap reasonably
-                return min(5000, int(content_words * 0.8))
+                # For very long content, cover everything comprehensively
+                return min(10000, int(content_words * 1.0))
     
     def _get_mode_instructions(self, podcast_mode: str) -> str:
         """
@@ -118,35 +119,49 @@ class LLMClient:
         """
         if podcast_mode == "summary":
             return """
-SUMMARY MODE - Quick Overview (~10 minutes max):
-- Focus on the most important key points (top 5-10 points)
-- Keep it concise but informative - like a news summary
-- Each speaker should say 2-3 sentences per turn
-- Skip minor details, but cover the main ideas clearly
-- Total output: ~1500 words maximum (~10 min at 150 wpm)
-- Think: "What would a 10-minute podcast highlight reel cover?"
+SUMMARY MODE - Comprehensive Overview (~17 minutes):
+- Cover the key points thoroughly, not just surface-level
+- Explain the "why" behind each point, not just the "what"
+- Each speaker should say 3-5 sentences per turn minimum
+- Include relevant context and background for each major point
+- The Host should ask follow-up questions to dig deeper into important concepts
+- The Expert should provide concrete examples and real-world applications
+- Total output: ~2500 words minimum
+- Think: "What would a thorough 17-minute podcast that actually teaches the listener something cover?"
+- DO NOT rush through topics - take time to explain concepts properly
+- When the Expert explains something, the Host should often ask "Can you give an example?" or "Why does that matter?"
 """
         elif podcast_mode == "analysis":
             return """
-ANALYSIS MODE - Detailed Discussion:
-- Cover the main topics with insights and analysis
-- Discuss implications, context, and significance
-- Include some examples to illustrate points
-- Each speaker can say 2-3 sentences per turn
-- Balance breadth and depth
-- Total output: ~1500 words
-- Think: "What would a thoughtful 10-minute analysis cover?"
+ANALYSIS MODE - Deep Dive Discussion:
+- Go DEEP into every topic - this is an in-depth analysis, not a surface overview
+- For each major point, explore: the context, the implications, the evidence, the counterarguments
+- The Host should actively challenge ideas, ask "why" repeatedly, and push for deeper explanations
+- The Expert should provide thorough explanations with multiple examples, case studies, or data points
+- Include historical context, industry trends, and future predictions where relevant
+- Each speaker should say 4-6+ sentences per turn - this is a detailed conversation
+- When a concept is introduced, explore it fully before moving on
+- Discuss what the source DOESN'T say - gaps, limitations, alternative viewpoints
+- Total output: ~4000 words minimum - this should feel like a thorough, meaty discussion
+- Think: "What would a 25+ minute podcast that leaves the listener truly understanding the topic look like?"
+- IMPORTANT: Do NOT summarize - ANALYZE. Break down concepts, examine assumptions, explore consequences
 """
         else:  # "full"
             return """
-FULL MODE - Complete Coverage (covers EVERYTHING):
-- Cover ALL content comprehensively - do NOT skip anything
-- Include ALL details, examples, explanations, and nuances
-- Natural conversation flow with transitions between topics
-- Each speaker can have longer turns when needed
-- Every section, point, and detail from the source must be discussed
-- Total output: dynamic length - as long as needed to cover everything
-- Think: "What would a thorough educational podcast episode that covers the entire document look like?"
+FULL MODE - Exhaustive Coverage (covers EVERYTHING in depth):
+- Cover ALL content comprehensively with DEEP exploration of every point
+- For EVERY detail in the source, provide: explanation, context, examples, and significance
+- The Host should be an active learner - ask clarifying questions, request examples, challenge assumptions
+- The Expert should teach thoroughly - explain concepts from first principles, provide multiple examples, address common misconceptions
+- Include ALL details, examples, explanations, nuances, AND expand on them meaningfully
+- When the source mentions a concept, explore what it means, why it matters, and how it connects to other ideas
+- Each speaker should have substantial turns - 5-8+ sentences when explaining complex ideas
+- Create natural back-and-forth: Host asks, Expert explains, Host probes deeper, Expert elaborates with examples
+- Discuss implications, applications, limitations, and connections to broader topics
+- Total output: as long as needed to cover everything thoroughly - typically 5000-10000+ words
+- Think: "What would a comprehensive educational podcast that leaves no stone unturned look like?"
+- CRITICAL: This is NOT a summary. This is a deep educational discussion. Every point deserves thorough exploration.
+- When in doubt, go deeper rather than moving on to the next topic
 """
     
     def generate_script(self, content: str, conversation_config: dict) -> str:
@@ -172,18 +187,35 @@ FULL MODE - Complete Coverage (covers EVERYTHING):
         mode_instructions = self._get_mode_instructions(podcast_mode)
         logger.info(f"📊 Mode: {podcast_mode} | Content: {content_words} words → Target: {word_count} words")
         
-        system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging 2-person conversation between a 'Host' and an 'Expert'.
+        system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging, in-depth 2-person conversation between a 'Host' and an 'Expert'.
 
 {mode_instructions}
 
 Guidelines:
 - Style: {style}
-- Target length: approximately {word_count} words (STRICT LIMIT - do not exceed)
+- Target length: approximately {word_count} words (aim for this length to ensure thorough coverage)
 - Podcast name: {podcast_name}
 - Make it conversational with natural flow
-- The Host should ask questions and show interest
-- The Expert should provide accurate information from the source
+- The Host should ask probing questions, challenge ideas, and request examples
+- The Expert should provide thorough, well-explained information with concrete examples
 - Format each line as: Host: [dialogue] or Expert: [dialogue]
+
+IMPORTANT - Make the dialogue sound NATURAL and CONVERSATIONAL (not like reading):
+- Include natural speech patterns: "Well...", "So...", "You know...", "I think...", "Hmm..."
+- Add reactions: "That's interesting!", "Right.", "Exactly!", "Oh, I see."
+- Use contractions: "don't" instead of "do not", "can't" instead of "cannot"
+- Include brief pauses with "... " for emphasis or thinking
+- Vary sentence length - mix short responses with longer explanations
+- Add filler words occasionally: "like", "kind of", "sort of", "basically"
+- Show personality: Host should be curious and engaging, Expert should be knowledgeable but approachable
+- Avoid overly formal language - make it sound like friends discussing a topic
+
+CRITICAL FOR DEPTH:
+- Never rush through a topic - if something is important, spend time on it
+- The Host should frequently ask follow-up questions like "Can you explain that more?" or "What does that mean in practice?"
+- The Expert should always provide concrete examples, analogies, or real-world applications when explaining concepts
+- Explore the "why" and "how" behind every point, not just the "what"
+- When a concept has implications, discuss them thoroughly
 
 {f'Additional instructions: {user_instructions}' if user_instructions else ''}"""
         
@@ -226,7 +258,7 @@ Guidelines:
                 raise RuntimeError(f"Script generation failed: {e}")
 
 
-class TTSClient:
+class KokoroTTSClient:
     """Client for text-to-speech synthesis using Kokoro."""
     
     def __init__(self, config: Config):
@@ -234,19 +266,20 @@ class TTSClient:
         self.server = None
         self.client = None
     
-    def start_server(self):
-        """Start the embedded TTS server if needed."""
-        host = self.config.tts.server.host
-        port = self.config.tts.server.port
+    def start(self):
+        """Start the embedded Kokoro TTS server if needed."""
+        kokoro_config = self.config.tts.kokoro
+        host = kokoro_config.server.host
+        port = kokoro_config.server.port
         
         if is_port_in_use(host, port):
-            logger.info(f"🔊 TTS server already running at http://{host}:{port}")
+            logger.info(f"🔊 Kokoro TTS server already running at http://{host}:{port}")
         else:
-            logger.info("🔊 Starting embedded TTS server...")
+            logger.info("🔊 Starting embedded Kokoro TTS server...")
             self.server = EmbeddedTTSServer(
                 host=host,
                 port=port,
-                model_name=self.config.tts.model
+                model_name=kokoro_config.model
             )
             self.server.start(blocking=False)
         
@@ -257,7 +290,7 @@ class TTSClient:
     
     def synthesize(self, text: str, voice: str) -> bytes:
         """
-        Synthesize text to audio.
+        Synthesize text to audio using Kokoro.
         
         Args:
             text: Text to synthesize
@@ -267,7 +300,7 @@ class TTSClient:
             Audio bytes (WAV format)
         """
         if not self.client:
-            raise RuntimeError("TTS client not initialized. Call start_server() first.")
+            raise RuntimeError("Kokoro TTS client not initialized. Call start() first.")
         
         try:
             response = self.client.audio.speech.create(
@@ -275,9 +308,11 @@ class TTSClient:
                 voice=voice,
                 input=text
             )
-            return response.content
+            audio_content = response.content
+            logger.debug(f"KokoroTTS synthesize: Got {len(audio_content) if audio_content else 0} bytes for text: '{text[:50]}...'")
+            return audio_content
         except Exception as e:
-            logger.error(f"TTS synthesis failed: {e}")
+            logger.error(f"Kokoro TTS synthesis failed: {e}")
             raise
     
     def synthesize_batch(self, segments: List[PodcastSegment], max_workers: int = 4) -> List[bytes]:
@@ -291,7 +326,7 @@ class TTSClient:
         Returns:
             List of audio bytes in order
         """
-        logger.info(f"🎙️ Synthesizing {len(segments)} audio segments...")
+        logger.info(f"🎙️ Synthesizing {len(segments)} audio segments with Kokoro...")
         start_time = time.time()
         
         results = [None] * len(segments)
@@ -307,27 +342,301 @@ class TTSClient:
             for future in as_completed(futures):
                 idx = futures[future]
                 try:
-                    results[idx] = future.result()
+                    audio_data = future.result()
+                    results[idx] = audio_data
+                    # Log audio data size for debugging
+                    if audio_data:
+                        logger.debug(f"   Segment {idx}: Got {len(audio_data)} bytes of audio")
+                    else:
+                        logger.warning(f"   Segment {idx}: Got EMPTY audio data!")
                     completed += 1
                     if completed % 5 == 0:
                         logger.info(f"   Progress: {completed}/{len(segments)} segments")
                 except Exception as e:
                     logger.error(f"Failed to synthesize segment {idx}: {e}")
                     raise
+            
+            # Log final results summary
+            non_none_count = sum(1 for r in results if r is not None)
+            empty_count = sum(1 for r in results if r is not None and len(r) == 0)
+            logger.info(f"   Batch synthesis complete: {non_none_count}/{len(segments)} segments have audio, {empty_count} are empty")
         
         elapsed = time.time() - start_time
-        logger.info(f"✅ Audio synthesis complete in {elapsed:.1f}s")
+        logger.info(f"✅ Kokoro audio synthesis complete in {elapsed:.1f}s")
         
         return results
 
 
-def parse_script(script: str, voices: dict) -> List[PodcastSegment]:
+class VoiceCloneTTSClient:
+    """Client for text-to-speech synthesis using Qwen3-TTS voice cloning."""
+    
+    def __init__(self, config: Config):
+        self.config = config
+        self.model = None
+        self.voice_prompts = {}  # Cache for voice prompts per speaker
+    
+    def start(self):
+        """Load the Qwen3-TTS model and create voice prompts."""
+        vc_config = self.config.tts.voice_clone
+        
+        logger.info(f"🔊 Loading Qwen3-TTS model: {vc_config.model}")
+        
+        try:
+            from qwen_tts import Qwen3TTSModel
+            import torch
+            
+            # Determine device
+            device = vc_config.device
+            if device == "auto":
+                if torch.cuda.is_available():
+                    device = "cuda:0"
+                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                    device = "mps"
+                else:
+                    device = "cpu"
+            
+            # Determine dtype
+            dtype_map = {
+                "bfloat16": torch.bfloat16,
+                "float16": torch.float16,
+                "float32": torch.float32,
+            }
+            torch_dtype = dtype_map.get(vc_config.dtype, torch.bfloat16)
+            
+            # Check attention implementation
+            attn = vc_config.attention
+            if attn == "flash_attention_2" and not torch.cuda.is_available():
+                logger.info("Flash attention 2 requires CUDA. Falling back to sdpa.")
+                attn = "sdpa"
+            
+            logger.info(f"   Device: {device}, dtype: {vc_config.dtype}, attention: {attn}")
+            
+            self.model = Qwen3TTSModel.from_pretrained(
+                vc_config.model,
+                device_map=device,
+                dtype=torch_dtype,
+                attn_implementation=attn,
+            )
+            
+            logger.info("✅ Qwen3-TTS model loaded successfully")
+            
+            # Create voice prompts for each speaker
+            self._create_voice_prompts()
+            
+        except ImportError:
+            raise ImportError(
+                "qwen-tts is not installed. Install it with: pip install qwen-tts"
+            )
+        except Exception as e:
+            logger.error(f"Failed to load Qwen3-TTS model: {e}")
+            raise
+    
+    def _create_voice_prompts(self):
+        """Create voice clone prompts for each speaker."""
+        vc_config = self.config.tts.voice_clone
+        
+        # Create voice prompt for speaker_1
+        speaker_1 = vc_config.voices.speaker_1
+        if speaker_1.ref_audio:
+            logger.info(f"🎤 Creating voice prompt for speaker_1 ({speaker_1.profile})...")
+            ref_audio_path = self._resolve_path(speaker_1.ref_audio)
+            self.voice_prompts["speaker_1"] = self.model.create_voice_clone_prompt(
+                ref_audio=ref_audio_path,
+                ref_text=speaker_1.ref_text,
+                x_vector_only_mode=False,
+            )
+            logger.info(f"   ✅ Voice prompt created for {speaker_1.profile}")
+        
+        # Create voice prompt for speaker_2
+        speaker_2 = vc_config.voices.speaker_2
+        if speaker_2.ref_audio:
+            logger.info(f"🎤 Creating voice prompt for speaker_2 ({speaker_2.profile})...")
+            ref_audio_path = self._resolve_path(speaker_2.ref_audio)
+            self.voice_prompts["speaker_2"] = self.model.create_voice_clone_prompt(
+                ref_audio=ref_audio_path,
+                ref_text=speaker_2.ref_text,
+                x_vector_only_mode=False,
+            )
+            logger.info(f"   ✅ Voice prompt created for {speaker_2.profile}")
+    
+    def _resolve_path(self, path: str) -> str:
+        """Resolve path relative to config file location."""
+        config_path = Path(self.config.output.directory).parent
+        resolved = config_path / path
+        if resolved.exists():
+            return str(resolved)
+        # Try absolute path
+        if Path(path).exists():
+            return path
+        raise FileNotFoundError(f"Reference audio not found: {path}")
+    
+    def _preprocess_text_for_conversation(self, text: str) -> str:
+        """
+        Preprocess text to make it sound more conversational for voice cloning.
+        
+        This adds natural speech patterns that help the TTS model produce
+        more natural-sounding output instead of flat "reading" style.
+        
+        Args:
+            text: Original text to preprocess
+        
+        Returns:
+            Preprocessed text with conversational markers
+        """
+        import re
+        
+        # Add brief pauses after punctuation for natural rhythm
+        # Replace "." with ". " (slight pause)
+        # Replace "?" with "? " (question pause)
+        # Replace "!" with "! " (emphasis pause)
+        text = re.sub(r'\.(\s|$)', '. ', text)
+        text = re.sub(r'\?(\s|$)', '? ', text)
+        text = re.sub(r'\!(\s|$)', '! ', text)
+        
+        # Add comma pauses for natural breathing
+        text = re.sub(r',(\s)', ', ', text)
+        
+        # Handle ellipsis for thinking pauses - ensure they're recognized
+        text = re.sub(r'\.\.\.', '... ', text)
+        
+        # Add slight pause before certain words for emphasis
+        emphasis_words = ['however', 'but', 'actually', 'in fact', 'you know', 'so', 'well']
+        for word in emphasis_words:
+            text = re.sub(rf'\b{word}\b', f'... {word}', text, count=1)
+        
+        # Clean up any double spaces
+        text = re.sub(r'\s{2,}', ' ', text)
+        
+        return text.strip()
+    
+    def synthesize(self, text: str, speaker: str) -> bytes:
+        """
+        Synthesize text to audio using voice cloning.
+        
+        Args:
+            text: Text to synthesize
+            speaker: Speaker identifier ("speaker_1" or "speaker_2")
+        
+        Returns:
+            Audio bytes (WAV format)
+        """
+        if not self.model:
+            raise RuntimeError("Voice clone TTS client not initialized. Call start() first.")
+        
+        voice_prompt = self.voice_prompts.get(speaker)
+        if not voice_prompt:
+            raise RuntimeError(f"No voice prompt for speaker: {speaker}")
+        
+        vc_config = self.config.tts.voice_clone
+        speaker_config = vc_config.voices.__dict__.get(speaker)
+        language = speaker_config.language if speaker_config else "English"
+        
+        # Preprocess text for more conversational output
+        processed_text = self._preprocess_text_for_conversation(text)
+        
+        try:
+            import soundfile as sf
+            import io
+            
+            wavs, sr = self.model.generate_voice_clone(
+                text=processed_text,
+                language=language,
+                voice_clone_prompt=voice_prompt,
+                max_new_tokens=vc_config.max_tokens,
+            )
+            
+            if wavs:
+                # Convert to WAV bytes
+                buffer = io.BytesIO()
+                sf.write(buffer, wavs[0], sr, format='WAV')
+                buffer.seek(0)
+                return buffer.read()
+            else:
+                raise RuntimeError("No audio generated")
+                
+        except Exception as e:
+            logger.error(f"Voice clone TTS synthesis failed: {e}")
+            raise
+    
+    def synthesize_batch(self, segments: List[PodcastSegment], max_workers: int = 1) -> List[bytes]:
+        """
+        Synthesize multiple segments sequentially (voice cloning doesn't support parallel well).
+        
+        Args:
+            segments: List of podcast segments
+            max_workers: Ignored for voice cloning (sequential processing)
+        
+        Returns:
+            List of audio bytes in order
+        """
+        logger.info(f"🎙️ Synthesizing {len(segments)} audio segments with Voice Cloning...")
+        start_time = time.time()
+        
+        results = []
+        
+        # Voice cloning is memory-intensive, process sequentially
+        for i, seg in enumerate(segments):
+            try:
+                # Map speaker name to speaker_id
+                speaker_id = "speaker_1" if seg.speaker.lower() == "host" else "speaker_2"
+                audio = self.synthesize(seg.text, speaker_id)
+                results.append(audio)
+                
+                if (i + 1) % 5 == 0:
+                    logger.info(f"   Progress: {i + 1}/{len(segments)} segments")
+                    
+            except Exception as e:
+                logger.error(f"Failed to synthesize segment {i}: {e}")
+                raise
+        
+        elapsed = time.time() - start_time
+        logger.info(f"✅ Voice clone audio synthesis complete in {elapsed:.1f}s")
+        
+        return results
+
+
+class TTSClient:
+    """Factory for TTS clients based on provider configuration."""
+    
+    def __init__(self, config: Config):
+        self.config = config
+        self._client = None
+    
+    def _get_client(self):
+        """Get the appropriate TTS client based on provider."""
+        if self._client is None:
+            provider = self.config.tts.provider
+            if provider == "kokoro":
+                self._client = KokoroTTSClient(self.config)
+            elif provider == "voice_clone":
+                self._client = VoiceCloneTTSClient(self.config)
+            else:
+                raise ValueError(f"Unknown TTS provider: {provider}")
+        return self._client
+    
+    def start_server(self):
+        """Start the TTS server/client (legacy method name)."""
+        client = self._get_client()
+        client.start()
+    
+    def synthesize(self, text: str, voice: str) -> bytes:
+        """Synthesize text to audio."""
+        client = self._get_client()
+        return client.synthesize(text, voice)
+    
+    def synthesize_batch(self, segments: List[PodcastSegment], max_workers: int = 4) -> List[bytes]:
+        """Synthesize multiple segments."""
+        client = self._get_client()
+        return client.synthesize_batch(segments, max_workers)
+
+
+def parse_script(script: str, config: Config) -> List[PodcastSegment]:
     """
     Parse a script into segments.
     
     Args:
         script: Raw script text
-        voices: Voice mapping with speaker_1 and speaker_2
+        config: Configuration object (used to determine TTS provider and voice settings)
     
     Returns:
         List of PodcastSegment objects
@@ -335,8 +644,17 @@ def parse_script(script: str, voices: dict) -> List[PodcastSegment]:
     segments = []
     lines = script.strip().split('\n')
     
-    speaker_1_voice = voices.get("speaker_1", "af_bella")
-    speaker_2_voice = voices.get("speaker_2", "am_adam")
+    # Get voice info based on provider
+    provider = config.tts.provider
+    
+    if provider == "voice_clone":
+        # For voice cloning, voice field stores the speaker_id for lookup
+        speaker_1_voice = "speaker_1"
+        speaker_2_voice = "speaker_2"
+    else:  # kokoro
+        # For Kokoro, voice field stores the voice name
+        speaker_1_voice = config.tts.kokoro.voices.speaker_1
+        speaker_2_voice = config.tts.kokoro.voices.speaker_2
     
     for line in lines:
         line = line.strip()
@@ -394,34 +712,98 @@ def save_script(script: str, output_path: str):
         f.write(script)
 
 
-def concatenate_audio(audio_chunks: List[bytes], output_path: str):
+def generate_silence(duration_seconds: float, sample_rate: int = 24000) -> np.ndarray:
     """
-    Concatenate audio chunks and save to file.
+    Generate silence audio samples.
+    
+    Args:
+        duration_seconds: Duration of silence in seconds
+        sample_rate: Sample rate for the audio
+    
+    Returns:
+        numpy array of silence samples
+    """
+    import numpy as np
+    num_samples = int(duration_seconds * sample_rate)
+    return np.zeros(num_samples, dtype=np.int16)
+
+
+def concatenate_audio(audio_chunks: List[bytes], output_path: str,
+                      segments: List[PodcastSegment] = None,
+                      pause_between: float = 0.5,
+                      pause_on_change: float = 1.0):
+    """
+    Concatenate audio chunks with natural pauses between dialogue segments.
     
     Args:
         audio_chunks: List of WAV audio bytes
         output_path: Output file path
+        segments: List of podcast segments (to detect speaker changes)
+        pause_between: Seconds of silence between each segment
+        pause_on_change: Extra pause when speaker changes (turn-taking)
     """
     import scipy.io.wavfile as wavfile
-    import numpy as np
     import io
     
-    # Parse all WAV files and concatenate
+    # Parse all WAV files and concatenate with pauses
     samples_list = []
-    sample_rate = 24000  # Kokoro default
+    sample_rate = 24000  # Default
     
-    for chunk in audio_chunks:
+    prev_speaker = None
+    
+    logger.info(f"🔍 Debug: Received {len(audio_chunks)} audio chunks")
+    for i, chunk in enumerate(audio_chunks):
+        if chunk is None:
+            logger.warning(f"   Chunk {i}: is None")
+        elif len(chunk) == 0:
+            logger.warning(f"   Chunk {i}: is empty bytes (0 bytes)")
+        else:
+            logger.debug(f"   Chunk {i}: {len(chunk)} bytes")
+        
         if chunk:
             buffer = io.BytesIO(chunk)
             sr, samples = wavfile.read(buffer)
-            if samples_list:
+            
+            if not samples_list:
+                sample_rate = sr
                 samples_list.append(samples)
             else:
-                sample_rate = sr
+                # Add pause before this segment
+                if segments and i < len(segments):
+                    current_speaker = segments[i].speaker
+                    
+                    # Determine pause duration based on speaker change
+                    if prev_speaker and current_speaker != prev_speaker:
+                        # Speaker changed - add longer pause (turn-taking)
+                        pause_duration = pause_between + pause_on_change
+                    else:
+                        # Same speaker continuing - shorter pause
+                        pause_duration = pause_between
+                    
+                    silence = generate_silence(pause_duration, sample_rate)
+                    samples_list.append(silence)
+                    prev_speaker = current_speaker
+                else:
+                    # No segment info - use default pause
+                    silence = generate_silence(pause_between, sample_rate)
+                    samples_list.append(silence)
+                
                 samples_list.append(samples)
     
     if not samples_list:
-        raise ValueError("No audio data to save")
+        # Provide more detailed error message
+        none_count = sum(1 for c in audio_chunks if c is None)
+        empty_count = sum(1 for c in audio_chunks if c is not None and len(c) == 0)
+        valid_count = sum(1 for c in audio_chunks if c is not None and len(c) > 0)
+        error_msg = (
+            f"No audio data to save. "
+            f"Total chunks: {len(audio_chunks)}, "
+            f"Valid: {valid_count}, "
+            f"Empty: {empty_count}, "
+            f"None: {none_count}"
+        )
+        logger.error(f"❌ {error_msg}")
+        raise ValueError(error_msg)
     
     # Concatenate all samples
     combined = np.concatenate(samples_list)
@@ -476,7 +858,7 @@ class PodcastGenerator:
         )
         
         # Parse script into segments
-        segments = parse_script(script_text, self.config.tts.voices)
+        segments = parse_script(script_text, self.config)
         logger.info(f"📝 Parsed {len(segments)} dialogue segments")
         
         # Save script if requested
@@ -494,8 +876,14 @@ class PodcastGenerator:
         # Synthesize audio
         audio_chunks = self.tts_client.synthesize_batch(segments)
         
-        # Concatenate and save
-        concatenate_audio(audio_chunks, output_path)
+        # Concatenate and save with natural pauses
+        concatenate_audio(
+            audio_chunks,
+            output_path,
+            segments=segments,
+            pause_between=self.config.tts.pause_between_segments,
+            pause_on_change=self.config.tts.pause_on_speaker_change
+        )
         
         return output_path
     
@@ -526,7 +914,7 @@ class PodcastGenerator:
         )
         
         # Parse script into segments
-        segments = parse_script(script_text, self.config.tts.voices)
+        segments = parse_script(script_text, self.config)
         logger.info(f"📝 Parsed {len(segments)} dialogue segments")
         
         # Save script if requested
@@ -544,7 +932,13 @@ class PodcastGenerator:
         # Synthesize audio
         audio_chunks = self.tts_client.synthesize_batch(segments)
         
-        # Concatenate and save
-        concatenate_audio(audio_chunks, output_path)
+        # Concatenate and save with natural pauses
+        concatenate_audio(
+            audio_chunks,
+            output_path,
+            segments=segments,
+            pause_between=self.config.tts.pause_between_segments,
+            pause_on_change=self.config.tts.pause_on_speaker_change
+        )
         
         return output_path
