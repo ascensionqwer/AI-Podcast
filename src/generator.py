@@ -760,6 +760,7 @@ def concatenate_audio(audio_chunks: List[bytes], output_path: str,
         else:
             logger.debug(f"   Chunk {i}: {len(chunk)} bytes")
         
+    for i, chunk in enumerate(audio_chunks):
         if chunk:
             buffer = io.BytesIO(chunk)
             sr, samples = wavfile.read(buffer)

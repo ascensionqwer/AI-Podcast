@@ -10,13 +10,14 @@ llm:
   model: "qwen/qwen3.6-27b"
   base_url: "http://localhost:1234/v1"
   api_key: "lm-studio"
+  temperature: 0.6
   max_tokens: 262144
 
 # TTS Configuration
 # Change 'provider' to switch between Kokoro and Voice Cloning
 tts:
   provider: "kokoro"  # Options: "kokoro" or "voice_clone"
- 
+  
   # --- Kokoro TTS Settings (used when provider="kokoro") ---
   kokoro:
     model: "mlx-community/Kokoro-82M-bf16"
@@ -73,4 +74,3 @@ output:
   directory: "./output"
   default_filename: "podcast.wav"
   keep_temp_script: false  # Keep intermediate script file for debugging
-
