@@ -656,31 +656,76 @@ def parse_script(script: str, config: Config) -> List[PodcastSegment]:
         speaker_1_voice = config.tts.kokoro.voices.speaker_1
         speaker_2_voice = config.tts.kokoro.voices.speaker_2
     
+    # Track parsing stats for debugging
+    total_lines = len(lines)
+    matched_lines = 0
+    skipped_lines = 0
+    
+    # More flexible regex patterns to handle various LLM output formats
+    # Pattern 1: "Host: text" or "Expert: text" (standard)
+    # Pattern 2: "**Host:** text" (markdown bold)
+    # Pattern 3: "Speaker 1: text" or "Speaker 2: text"
+    # Pattern 4: "HOST:" or "EXPERT:" (uppercase)
+    patterns = [
+        r'^\*?\*?(Host|Expert|Speaker\s*1|Speaker\s*2)\*?\*?\s*:\s*(.+)$',  # With optional markdown bold
+        r'^(HOST|EXPERT)\s*:\s*(.+)$',  # Uppercase
+        r'^(Speaker\s*[12])\s*:\s*(.+)$',  # Speaker 1/2
+    ]
+    
     for line in lines:
         line = line.strip()
         if not line:
+            skipped_lines += 1
             continue
         
-        # Match "Host: text" or "Expert: text" patterns
-        match = re.match(r'^(Host|Expert|Speaker\s*1|Speaker\s*2)\s*:\s*(.+)$', line, re.IGNORECASE)
-        if match:
-            speaker = match.group(1).lower()
-            text = match.group(2).strip()
-            
-            # Map speaker to voice
-            if speaker in ('host', 'speaker 1', 'speaker1'):
-                voice = speaker_1_voice
-                speaker_name = "Host"
-            else:
-                voice = speaker_2_voice
-                speaker_name = "Expert"
-            
-            if text:  # Only add non-empty segments
-                segments.append(PodcastSegment(
-                    speaker=speaker_name,
-                    text=text,
-                    voice=voice
-                ))
+        # Skip markdown headers, titles, and non-dialogue lines
+        if line.startswith('#') or line.startswith('---') or line.startswith('==='):
+            skipped_lines += 1
+            continue
+        
+        matched = False
+        for pattern in patterns:
+            match = re.match(pattern, line, re.IGNORECASE)
+            if match:
+                matched = True
+                matched_lines += 1
+                speaker = match.group(1).lower().replace('*', '').strip()
+                text = match.group(2).strip()
+                
+                # Remove markdown formatting from text
+                text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)  # Remove bold
+                text = re.sub(r'\*(.+?)\*', r'\1', text)      # Remove italic
+                
+                # Map speaker to voice
+                if speaker in ('host', 'speaker 1', 'speaker1', 'speaker1'):
+                    voice = speaker_1_voice
+                    speaker_name = "Host"
+                else:
+                    voice = speaker_2_voice
+                    speaker_name = "Expert"
+                
+                if text:  # Only add non-empty segments
+                    segments.append(PodcastSegment(
+                        speaker=speaker_name,
+                        text=text,
+                        voice=voice
+                    ))
+                break
+        
+        if not matched:
+            skipped_lines += 1
+            # Log first few skipped lines for debugging
+            if skipped_lines <= 5:
+                logger.debug(f"   Skipped line: '{line[:80]}...'")
+    
+    # Log parsing stats
+    logger.info(f"   Script parsing: {total_lines} lines, {matched_lines} matched, {skipped_lines} skipped")
+    
+    if not segments:
+        logger.warning("⚠️ No dialogue segments parsed from script!")
+        logger.warning("   Script preview (first 500 chars):")
+        logger.warning(f"   {script[:500]}")
+        logger.warning("   Expected format: 'Host: text' or 'Expert: text'")
     
     return segments
 
@@ -862,6 +907,14 @@ class PodcastGenerator:
         segments = parse_script(script_text, self.config)
         logger.info(f"📝 Parsed {len(segments)} dialogue segments")
         
+        # Check if we have any segments to synthesize
+        if not segments:
+            raise RuntimeError(
+                "No dialogue segments found in the generated script. "
+                "The LLM may have returned a non-dialogue format. "
+                "Check the script output and ensure it uses 'Host:' and 'Expert:' format."
+            )
+        
         # Save script if requested
         script_path = Path(output_path).with_suffix('.txt')
         if self.config.output.keep_temp_script or script_only:
@@ -917,6 +970,14 @@ class PodcastGenerator:
         # Parse script into segments
         segments = parse_script(script_text, self.config)
         logger.info(f"📝 Parsed {len(segments)} dialogue segments")
+        
+        # Check if we have any segments to synthesize
+        if not segments:
+            raise RuntimeError(
+                "No dialogue segments found in the generated script. "
+                "The LLM may have returned a non-dialogue format. "
+                "Check the script output and ensure it uses 'Host:' and 'Expert:' format."
+            )
         
         # Save script if requested
         script_path = Path(output_path).with_suffix('.txt')
