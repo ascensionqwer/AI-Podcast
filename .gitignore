@@ -21,25 +21,11 @@ env/
 ._*
 Thumbs.db
 
-# Output files (keep directory structure)
-output/*.wav
-output/*.mp3
-output/*.txt
-!output/.gitkeep
+# Output files
+output/
 
-# Assets files (keep directory structure)
-assets/*.md
-assets/*.txt
-assets/*.pdf
-assets/*.docx
-assets/*.doc
-assets/*.pptx
-assets/*.ppt
-assets/*.xlsx
-assets/*.xls
-assets/*.html
-assets/*.htm
-!assets/.gitkeep
+# Assets files
+assets/
 
 # Logs
 *.log
