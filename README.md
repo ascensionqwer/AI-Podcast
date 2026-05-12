@@ -5,8 +5,6 @@ A unified podcast generation system that runs **100% locally** on Apple Silicon 
 - **Kokoro TTS** via MLX-Audio for high-quality voice synthesis
 - **Docling** for document conversion (PDF, DOCX, PPTX, etc.)
 
-![Podcastfy Local GUI](https://via.placeholder.com/800x400?text=Podcastfy+Local+GUI)
-
 ---
 
 ## 📄 Supported Input Formats
