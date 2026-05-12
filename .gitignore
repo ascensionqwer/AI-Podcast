@@ -27,6 +27,9 @@ output/
 # Assets files
 assets/
 
+# Voice profiles (local only)
+Profile/
+
 # Logs
 *.log
 
