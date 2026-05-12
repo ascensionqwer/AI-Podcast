@@ -21,14 +21,17 @@ env/
 ._*
 Thumbs.db
 
-# Output files
-output/
+# Output directory (empty - add files here)
+output/*
+!output/.gitkeep
 
-# Assets files
-assets/
+# Assets directory (empty - add input files here)  
+assets/*
+!assets/.gitkeep
 
-# Voice profiles (local only)
-Profile/
+# Voice profiles directory (local only - add profile folders here)
+Profile/*
+!Profile/.gitkeep
 
 # Logs
 *.log
@@ -46,9 +49,3 @@ Profile/
 
 # Plans (internal)
 plans/
-
-# Profile files (voice profiles)
-Profile/*.wav
-Profile/*.txt
-!Profile/.gitkeep
-!Profile/.gitignore

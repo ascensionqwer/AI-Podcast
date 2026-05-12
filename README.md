@@ -1,7 +1,7 @@
 # Podcastfy Local - AI Podcast Generator
 
 A unified podcast generation system that runs **100% locally** on Apple Silicon using:
-- **LM Studio** with qwen3.5-122b-a10b for script generation
+- **LM Studio** with qwen3.6-35b-a3b for script generation
 - **Kokoro TTS** via MLX-Audio for high-quality voice synthesis
 - **Docling** for document conversion (PDF, DOCX, PPTX, etc.)
 
