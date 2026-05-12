@@ -1,0 +1,5 @@
+# Ignore all files in assets directory
+*
+# But keep the .gitkeep and .gitignore files
+!.gitkeep
+!.gitignore

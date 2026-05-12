@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+._*
+Thumbs.db
+
+# Output directory (empty - add files here)
+output/*
+!output/.gitkeep
+
+# Assets directory (empty - add input files here)  
+assets/*
+!assets/.gitkeep
+
+# Voice profiles directory (local only - add profile folders here)
+Profile/*
+!Profile/.gitkeep
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Model cache (optional - uncomment if you want to exclude)
+# .cache/
+
+# Environment variables
+.env
+.env.local
+
+# Plans (internal)
+plans/
