@@ -15,6 +15,7 @@ env/
 *.swp
 *.swo
 *~
+.qwen
 
 # OS
 .DS_Store
