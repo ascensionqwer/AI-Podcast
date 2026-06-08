@@ -16,7 +16,7 @@ llm:
 # TTS Configuration
 # Change 'provider' to switch between Kokoro and Voice Cloning
 tts:
-  provider: "kokoro"  # Options: "kokoro" or "voice_clone"
+  provider: "voice_clone"  # Options: "kokoro" or "voice_clone"
   
   # --- Kokoro TTS Settings (used when provider="kokoro") ---
   kokoro:
