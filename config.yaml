@@ -16,7 +16,7 @@ llm:
 # TTS Configuration
 # Change 'provider' to switch between Kokoro and Voice Cloning
 tts:
-  provider: "voice_clone"  # Options: "kokoro" or "voice_clone"
+  provider: "kokoro"  # Options: "kokoro" or "voice_clone"
   
   # --- Kokoro TTS Settings (used when provider="kokoro") ---
   kokoro:
@@ -170,13 +170,12 @@ coverage:
 
     ## STYLE & TONE REQUIREMENTS
 
-    ### Vocabulary Bank (use these types of words):
+    ### Vocabulary Bank (use these types of words, feel free to use other wider range of vocabulary):
     - *Verbs:* Interrogate, explore, develop, decenter, flatten, undermine, reinforce, perpetuate, gesture toward, resolve, dismantle, strengthen.
     - *Adjectives:* Ambitious, undercooked, visceral, banal, hegemonic, superficial, structural, ideological, poignant, lackluster.
 
     ### Sentence Structure:
     - Use complex compound sentences with semicolons and parentheticals.
-    - Example: "While the script attempts to subvert [Trope], it ultimately reinforces [Idea]; the protagonist's victory is not a dismantling of the system, but a rebranding of it."
 
     ### Critique Strategy:
     - Always acknowledge what the script *tries* to do before criticizing how it fails.

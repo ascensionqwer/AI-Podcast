@@ -910,6 +910,140 @@ def save_script(script: str, output_path: str):
         f.write(script)
 
 
+def save_coverage_docx(structured_report: str, output_path: str):
+    """
+    Save coverage report as a formatted Microsoft Word document.
+    
+    Parses the markdown-structured report and creates a properly formatted .docx file
+    with tables, headings, bold text, and paragraphs.
+    
+    Args:
+        structured_report: Markdown-formatted coverage report text
+        output_path: Path for output .docx file
+    """
+    try:
+        from docx import Document
+        from docx.shared import Pt, Inches, RGBColor
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        from docx.oxml.ns import qn
+        from docx.oxml import OxmlElement
+    except ImportError:
+        logger.warning("python-docx not installed. Skipping .docx generation. Install with: pip install python-docx")
+        return
+    
+    doc = Document()
+    
+    # Set default font
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Calibri'
+    font.size = Pt(11)
+    
+    lines = structured_report.strip().split('\n')
+    i = 0
+    
+    while i < len(lines):
+        line = lines[i].strip()
+        
+        # Skip empty lines
+        if not line:
+            i += 1
+            continue
+        
+        # Check for table (starts with |)
+        if line.startswith('|'):
+            # Collect all table rows
+            table_lines = []
+            while i < len(lines) and lines[i].strip().startswith('|'):
+                table_lines.append(lines[i].strip())
+                i += 1
+            
+            # Parse table
+            if len(table_lines) >= 2:
+                # Parse header row
+                header_cells = [cell.strip() for cell in table_lines[0].split('|')[1:-1]]
+                
+                # Skip separator row (contains ---)
+                data_start = 1
+                if len(table_lines) > 1 and '---' in table_lines[1]:
+                    data_start = 2
+                
+                # Create table
+                num_cols = len(header_cells)
+                num_rows = len(table_lines) - data_start
+                table = doc.add_table(rows=num_rows + 1, cols=num_cols)
+                table.style = 'Table Grid'
+                
+                # Fill header
+                for j, cell_text in enumerate(header_cells):
+                    cell = table.rows[0].cells[j]
+                    cell.text = cell_text
+                    # Make header bold
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.bold = True
+                
+                # Fill data rows
+                for row_idx in range(data_start, len(table_lines)):
+                    data_cells = [cell.strip() for cell in table_lines[row_idx].split('|')[1:-1]]
+                    for col_idx, cell_text in enumerate(data_cells):
+                        if col_idx < num_cols:
+                            cell = table.rows[row_idx - data_start + 1].cells[col_idx]
+                            # Remove markdown formatting
+                            cell_text = re.sub(r'\*\*(.+?)\*\*', r'\1', cell_text)
+                            cell.text = cell_text
+                
+                doc.add_paragraph()  # Spacing after table
+            continue
+        
+        # Check for heading (LOGLINE, SUMMARY, COMMENTS)
+        if line.startswith('**') and line.endswith(':**'):
+            heading_text = line.strip('*:')
+            heading = doc.add_heading(heading_text, level=2)
+            i += 1
+            continue
+        
+        # Check for recommendation line (bold RECOMMEND/CONSIDER/PASS)
+        if line.startswith('**') and ('RECOMMEND' in line or 'CONSIDER' in line or 'PASS' in line):
+            rec_text = line.strip('*')
+            para = doc.add_paragraph()
+            run = para.add_run(rec_text)
+            run.bold = True
+            run.font.size = Pt(12)
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            i += 1
+            continue
+        
+        # Regular paragraph
+        # Collect consecutive non-empty lines as one paragraph
+        para_lines = []
+        while i < len(lines) and lines[i].strip() and not lines[i].strip().startswith('|') and not lines[i].strip().startswith('**'):
+            para_lines.append(lines[i].strip())
+            i += 1
+        
+        if para_lines:
+            para_text = ' '.join(para_lines)
+            # Handle bold text within paragraph
+            para = doc.add_paragraph()
+            
+            # Split by bold markers and add runs
+            parts = re.split(r'(\*\*.*?\*\*)', para_text)
+            for part in parts:
+                if part.startswith('**') and part.endswith('**'):
+                    # Bold text
+                    run = para.add_run(part[2:-2])
+                    run.bold = True
+                else:
+                    # Regular text
+                    para.add_run(part)
+    
+    # Save document
+    path = Path(output_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc.save(str(path))
+    logger.info(f"📄 Coverage report saved as Word document: {output_path}")
+
+
 def generate_silence(duration_seconds: float, sample_rate: int = 24000) -> np.ndarray:
     """
     Generate silence audio samples.
@@ -1205,6 +1339,10 @@ class PodcastGenerator:
         save_script(coverage_result.structured_report, str(report_path))
         logger.info(f"📄 Coverage report saved to: {report_path}")
         
+        # Also save as Word document
+        docx_path = Path(output_path).with_suffix('.docx')
+        save_coverage_docx(coverage_result.structured_report, str(docx_path))
+        
         # Check if we have any segments to synthesize
         if not coverage_result.segments:
             raise RuntimeError(
@@ -1264,6 +1402,10 @@ class PodcastGenerator:
         report_path = Path(output_path).with_suffix('.txt')
         save_script(coverage_result.structured_report, str(report_path))
         logger.info(f"📄 Coverage report saved to: {report_path}")
+        
+        # Also save as Word document
+        docx_path = Path(output_path).with_suffix('.docx')
+        save_coverage_docx(coverage_result.structured_report, str(docx_path))
         
         # Check if we have any segments to synthesize
         if not coverage_result.segments:

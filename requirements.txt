@@ -31,3 +31,5 @@ pillow>=10.0.0
 
 # Document conversion - Docling for PDF, DOCX, PPTX support
 docling>=2.0.0
+# Document generation
+python-docx>=1.0.0
