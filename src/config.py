@@ -111,6 +111,14 @@ class ConversationConfig:
 
 
 @dataclass
+class CoverageConfig:
+    """Script coverage configuration (used when podcast_mode='coverage')."""
+    analyst_name: str = "Lana Tania"
+    pause_between_segments: float = 0.8
+    system_prompt: str = ""
+
+
+@dataclass
 class OutputConfig:
     """Output configuration."""
     directory: str = "./output"
@@ -124,6 +132,7 @@ class Config:
     llm: LLMConfig = field(default_factory=LLMConfig)
     tts: TTSConfig = field(default_factory=TTSConfig)
     conversation: ConversationConfig = field(default_factory=ConversationConfig)
+    coverage: CoverageConfig = field(default_factory=CoverageConfig)
     output: OutputConfig = field(default_factory=OutputConfig)
     
     @classmethod
@@ -141,6 +150,7 @@ class Config:
         llm_data = data.get("llm", {})
         tts_data = data.get("tts", {})
         conversation_data = data.get("conversation", {})
+        coverage_data = data.get("coverage", {})
         output_data = data.get("output", {})
         
         # Parse Kokoro config
@@ -223,6 +233,11 @@ class Config:
                 podcast_mode=conversation_data.get("podcast_mode", "summary"),
                 user_instructions=conversation_data.get("user_instructions", "")
             ),
+            coverage=CoverageConfig(
+                analyst_name=coverage_data.get("analyst_name", "Lana Tania"),
+                pause_between_segments=coverage_data.get("pause_between_segments", 0.8),
+                system_prompt=coverage_data.get("system_prompt", "")
+            ),
             output=OutputConfig(
                 directory=output_data.get("directory", "./output"),
                 default_filename=output_data.get("default_filename", "podcast.wav"),
@@ -255,6 +270,11 @@ class Config:
                 issues.append("Voice clone TTS voices must have ref_text configured for both speakers")
         else:
             issues.append(f"Unknown TTS provider: {self.tts.provider}. Use 'kokoro' or 'voice_clone'")
+        
+        # Check coverage settings
+        if self.conversation.podcast_mode == "coverage":
+            if not self.coverage.system_prompt:
+                issues.append("Coverage mode requires a system_prompt in the coverage config section")
         
         # Check output directory
         output_path = Path(self.output.directory)

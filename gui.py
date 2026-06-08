@@ -166,7 +166,7 @@ class PodcastfyApp(ctk.CTk):
         # Podcast Mode Section
         self.mode_section = ctk.CTkLabel(
             self.sidebar,
-            text="─── Podcast Mode ───",
+            text="─── Mode ───",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
@@ -175,7 +175,7 @@ class PodcastfyApp(ctk.CTk):
         # Podcast mode dropdown
         self.mode_dropdown = ctk.CTkOptionMenu(
             self.sidebar,
-            values=["summary", "analysis", "full"],
+            values=["summary", "analysis", "full", "coverage"],
             variable=self.podcast_mode,
             command=self._on_mode_change,
             height=32,
@@ -213,6 +213,27 @@ class PodcastfyApp(ctk.CTk):
         self.instructions_textbox.grid(row=13, column=0, padx=20, pady=5)
         self.instructions_textbox.insert("1.0", "Optional: Enter specific focus areas or instructions for analysis mode...")
         self.instructions_textbox.grid_remove()  # Hidden by default
+        
+        # Coverage Info Section (for coverage mode)
+        self.coverage_info_label = ctk.CTkLabel(
+            self.sidebar,
+            text="─── Coverage Info ───",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        self.coverage_info_label.grid(row=12, column=0, padx=20, pady=(10, 5))
+        
+        self.coverage_info_text = ctk.CTkLabel(
+            self.sidebar,
+            text="Script coverage generates a single-narrator audio report analyzing the screenplay/CCSL. A structured text report is always saved alongside the audio.",
+            font=ctk.CTkFont(size=10),
+            text_color="gray",
+            wraplength=240,
+            justify="left"
+        )
+        self.coverage_info_text.grid(row=13, column=0, padx=20, pady=5)
+        self.coverage_info_label.grid_remove()  # Hidden by default
+        self.coverage_info_text.grid_remove()  # Hidden by default
         
         # Generate Section
         self.gen_section = ctk.CTkLabel(
@@ -259,7 +280,7 @@ class PodcastfyApp(ctk.CTk):
         # Version label
         self.version_label = ctk.CTkLabel(
             self.sidebar,
-            text="v1.0.0 | LM Studio + Kokoro",
+            text="v1.1.0 | LM Studio + Kokoro",
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
@@ -530,7 +551,7 @@ class PodcastfyApp(ctk.CTk):
         self.is_generating = True
         self.generate_btn.configure(state="disabled", text="⏳ Generating...")
         self.progress_bar.start()
-        self.status_text.set("🚀 Starting podcast generation...")
+        self.status_text.set("🚀 Starting generation...")
         
         thread = threading.Thread(
             target=self._generation_thread,
@@ -543,22 +564,51 @@ class PodcastfyApp(ctk.CTk):
         descriptions = {
             "summary": "summary: Comprehensive overview (~17 min)",
             "analysis": "analysis: Deep dive discussion (~25+ min)",
-            "full": "full: Exhaustive coverage (in-depth)"
+            "full": "full: Exhaustive coverage (in-depth)",
+            "coverage": "coverage: Script coverage (single narrator)"
         }
         self.mode_desc.configure(text=descriptions.get(choice, ""))
         
-        # Show/hide instructions textbox based on mode
+        # Update generate button text based on mode
+        if choice == "coverage":
+            self.generate_btn.configure(text="🎬 Generate Coverage")
+        else:
+            self.generate_btn.configure(text="🚀 Generate Podcast")
+        
+        # Show/hide sections based on mode
         if choice == "analysis":
+            # Show custom instructions
             self.instructions_label.grid(row=12, column=0, padx=20, pady=(10, 5))
             self.instructions_textbox.grid(row=13, column=0, padx=20, pady=5)
+            # Hide coverage info
+            self.coverage_info_label.grid_remove()
+            self.coverage_info_text.grid_remove()
+            # Standard layout below
+            self.gen_section.grid(row=14, column=0, padx=20, pady=(10, 5))
+            self.script_only_cb.grid(row=15, column=0, padx=20, pady=5)
+            self.generate_btn.grid(row=16, column=0, padx=20, pady=10)
+            self.progress_bar.grid(row=17, column=0, padx=20, pady=5)
+            self.version_label.grid(row=18, column=0, padx=20, pady=(10, 10))
+        elif choice == "coverage":
+            # Hide custom instructions
+            self.instructions_label.grid_remove()
+            self.instructions_textbox.grid_remove()
+            # Show coverage info
+            self.coverage_info_label.grid(row=12, column=0, padx=20, pady=(10, 5))
+            self.coverage_info_text.grid(row=13, column=0, padx=20, pady=5)
+            # Standard layout below
             self.gen_section.grid(row=14, column=0, padx=20, pady=(10, 5))
             self.script_only_cb.grid(row=15, column=0, padx=20, pady=5)
             self.generate_btn.grid(row=16, column=0, padx=20, pady=10)
             self.progress_bar.grid(row=17, column=0, padx=20, pady=5)
             self.version_label.grid(row=18, column=0, padx=20, pady=(10, 10))
         else:
+            # Hide both custom instructions and coverage info
             self.instructions_label.grid_remove()
             self.instructions_textbox.grid_remove()
+            self.coverage_info_label.grid_remove()
+            self.coverage_info_text.grid_remove()
+            # Compact layout
             self.gen_section.grid(row=12, column=0, padx=20, pady=(10, 5))
             self.script_only_cb.grid(row=13, column=0, padx=20, pady=5)
             self.generate_btn.grid(row=14, column=0, padx=20, pady=10)
@@ -570,12 +620,15 @@ class PodcastfyApp(ctk.CTk):
         # Remove extension
         base_name = current_name.rsplit('.', 1)[0] if '.' in current_name else current_name
         # Remove any existing mode suffix
-        for suffix in ["_summary", "_analysis", "_full"]:
+        for suffix in ["_summary", "_analysis", "_full", "_coverage"]:
             if base_name.endswith(suffix):
                 base_name = base_name[:-len(suffix)]
                 break
-        # Add new mode suffix
-        new_name = f"{base_name}_{choice}.wav"
+        # Also remove _podcast suffix if present to rebuild cleanly
+        if base_name.endswith("_podcast"):
+            base_name = base_name[:-len("_podcast")]
+        # Add new name with mode suffix
+        new_name = f"{base_name}_podcast_{choice}.wav"
         self.output_filename.set(new_name)
     
     def _generation_thread(self):
@@ -588,10 +641,10 @@ class PodcastfyApp(ctk.CTk):
             config = load_config(str(self.base_dir / "config.yaml"))
             
             # Override podcast mode based on GUI selection
-            config.conversation.podcast_mode = self.podcast_mode.get()
-            
-            # Get user instructions from textbox (for analysis mode)
             current_mode = self.podcast_mode.get()
+            config.conversation.podcast_mode = current_mode
+            
+            # Get user instructions from textbox (for analysis mode only)
             if current_mode == "analysis":
                 instructions = self.instructions_textbox.get("1.0", "end-1c").strip()
                 # Ignore placeholder text
@@ -600,7 +653,7 @@ class PodcastfyApp(ctk.CTk):
                 else:
                     config.conversation.user_instructions = ""
             
-            # Get output path (filename already has mode suffix from _on_mode_change)
+            # Get output path
             output_name = self.output_filename.get()
             if not output_name.endswith(('.wav', '.mp3')):
                 output_name += '.wav'
@@ -610,8 +663,11 @@ class PodcastfyApp(ctk.CTk):
             script_only = self.script_only_var.get() == "on"
             
             # Update status with mode info
-            mode_name = self.podcast_mode.get().capitalize()
-            self.after(0, lambda: self.status_text.set(f"🧠 Generating {mode_name} podcast script..."))
+            if current_mode == "coverage":
+                mode_name = "Script Coverage"
+            else:
+                mode_name = f"{current_mode.capitalize()} podcast"
+            self.after(0, lambda: self.status_text.set(f"🧠 Generating {mode_name}..."))
             
             # Generate
             generator = PodcastGenerator(config)
@@ -630,7 +686,14 @@ class PodcastfyApp(ctk.CTk):
     def _generation_complete(self, success: bool, message: str):
         """Handle generation completion."""
         self.is_generating = False
-        self.generate_btn.configure(state="normal", text="🚀 Generate Podcast")
+        
+        current_mode = self.podcast_mode.get()
+        if current_mode == "coverage":
+            btn_text = "🎬 Generate Coverage"
+        else:
+            btn_text = "🚀 Generate Podcast"
+        
+        self.generate_btn.configure(state="normal", text=btn_text)
         self.progress_bar.stop()
         self.progress_bar.set(0)
         

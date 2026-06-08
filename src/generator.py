@@ -36,6 +36,15 @@ class PodcastScript:
     source_file: Optional[str] = None
 
 
+@dataclass
+class CoverageResult:
+    """Result of script coverage generation."""
+    segments: List[PodcastSegment]
+    structured_report: str
+    raw_text: str
+    source_file: Optional[str] = None
+
+
 class LLMClient:
     """Client for interacting with LM Studio (OpenAI-compatible API)."""
     
@@ -135,166 +144,235 @@ SUMMARY MODE - Comprehensive Overview (~17 minutes):
             return """
 ANALYSIS MODE - Deep Dive Discussion:
 - Go DEEP into every topic - this is an in-depth analysis, not a surface overview
-- For each major point, explore: the context, the implications, the evidence, the counterarguments
-- The Host should actively challenge ideas, ask "why" repeatedly, and push for deeper explanations
-- The Expert should provide thorough explanations with multiple examples, case studies, or data points
-- Include historical context, industry trends, and future predictions where relevant
-- Each speaker should say 4-6+ sentences per turn - this is a detailed conversation
-- When a concept is introduced, explore it fully before moving on
-- Discuss what the source DOESN'T say - gaps, limitations, alternative viewpoints
-- Total output: ~4000 words minimum - this should feel like a thorough, meaty discussion
-- Think: "What would a 25+ minute podcast that leaves the listener truly understanding the topic look like?"
-- IMPORTANT: Do NOT summarize - ANALYZE. Break down concepts, examine assumptions, explore consequences
+- For each major point, explore: the underlying principles, real-world implications, common misconceptions, and practical applications
+- Each speaker should say 5-8 sentences per turn minimum
+- Include detailed examples, case studies, and analogies
+- The Host should challenge the Expert's assertions and ask probing questions
+- The Expert should provide nuanced analysis with multiple perspectives
+- Total output: ~4000 words minimum
+- Think: "What would a 25+ minute deep-dive podcast between two experts cover?"
+- DO NOT skip nuances or complexities - embrace them
+- When discussing implications, go beyond the obvious - explore second and third-order effects
 """
-        else:  # "full"
+        else:  # "full" mode
             return """
-FULL MODE - Exhaustive Coverage (covers EVERYTHING in depth):
-- Cover ALL content comprehensively with DEEP exploration of every point
-- For EVERY detail in the source, provide: explanation, context, examples, and significance
-- The Host should be an active learner - ask clarifying questions, request examples, challenge assumptions
-- The Expert should teach thoroughly - explain concepts from first principles, provide multiple examples, address common misconceptions
-- Include ALL details, examples, explanations, nuances, AND expand on them meaningfully
-- When the source mentions a concept, explore what it means, why it matters, and how it connects to other ideas
-- Each speaker should have substantial turns - 5-8+ sentences when explaining complex ideas
-- Create natural back-and-forth: Host asks, Expert explains, Host probes deeper, Expert elaborates with examples
-- Discuss implications, applications, limitations, and connections to broader topics
-- Total output: as long as needed to cover everything thoroughly - typically 5000-10000+ words
-- Think: "What would a comprehensive educational podcast that leaves no stone unturned look like?"
-- CRITICAL: This is NOT a summary. This is a deep educational discussion. Every point deserves thorough exploration.
-- When in doubt, go deeper rather than moving on to the next topic
+FULL MODE - Exhaustive Coverage:
+- Cover EVERY SINGLE POINT in the content - nothing should be left out
+- This is the most comprehensive mode - treat it like writing a book about the content
+- Each speaker should say 5-10 sentences per turn minimum
+- For each point: explain it, give context, provide examples, discuss implications, address counterarguments
+- The Host should ensure thorough coverage by asking detailed follow-up questions
+- The Expert should provide comprehensive analysis with extensive examples
+- Total output: Scale based on content length (see word count target above)
+- Think: "If someone could NOT read the original content, would this podcast teach them everything?"
+- DO NOT summarize or condense - expand and elaborate on everything
+- Include tangential but relevant information that enriches understanding
+- When the content mentions something briefly, take time to fully explore it
 """
     
     def generate_script(self, content: str, conversation_config: dict) -> str:
         """
-        Generate a podcast script from content.
+        Generate a podcast script from content using LM Studio.
         
         Args:
-            content: The source content to transform
-            conversation_config: Conversation style configuration
+            content: The source content to discuss
+            conversation_config: Conversation configuration dict
         
         Returns:
-            Generated script as text
+            Generated script text
         """
-        style = ", ".join(conversation_config.get("conversation_style", ["casual", "informative"]))
-        podcast_mode = conversation_config.get("podcast_mode", "summary")
-        podcast_name = conversation_config.get("podcast_name", "Local Podcast")
-        creativity = conversation_config.get("creativity", 0.7)
-        user_instructions = conversation_config.get("user_instructions", "")
+        podcast_mode = conversation_config.get('podcast_mode', 'summary')
+        podcast_name = conversation_config.get('podcast_name', 'AI Podcast')
+        creativity = conversation_config.get('creativity', 0.7)
+        user_instructions = conversation_config.get('user_instructions', '')
         
-        # Calculate word count based on mode
-        word_count = self._calculate_word_count(content, podcast_mode)
-        content_words = len(content.split())
+        target_word_count = self._calculate_word_count(content, podcast_mode)
         mode_instructions = self._get_mode_instructions(podcast_mode)
-        logger.info(f"📊 Mode: {podcast_mode} | Content: {content_words} words → Target: {word_count} words")
         
-        system_prompt = f"""You are a world-class podcast script writer. Transform the provided content into an engaging, in-depth 2-person conversation between a 'Host' and an 'Expert'.
+        system_prompt = f"""You are a script writer for "{podcast_name}", a popular educational podcast. 
+Your job is to take source content and transform it into an engaging, natural-sounding podcast dialogue.
+
+CREATIVITY LEVEL: {creativity} (0.0=factual/strict, 1.0=creative/liberal interpretation)
+
+TARGET LENGTH: Approximately {target_word_count} words total (both speakers combined).
+This is CRITICAL - aim for this target length. Do not fall significantly short.
 
 {mode_instructions}
 
-Guidelines:
-- Style: {style}
-- Target length: approximately {word_count} words (aim for this length to ensure thorough coverage)
-- Podcast name: {podcast_name}
-- Make it conversational with natural flow
-- The Host should ask probing questions, challenge ideas, and request examples
-- The Expert should provide thorough, well-explained information with concrete examples
-- Format each line as: Host: [dialogue] or Expert: [dialogue]
+OUTPUT FORMAT:
+- Write as a dialogue between two speakers: "Host:" and "Expert:"
+- Each line should start with the speaker name followed by a colon
+- Alternate between speakers naturally (like a real conversation)
+- Include natural speech patterns: filler words (um, uh, you know), contractions, pauses (...)
+- Make it sound like a REAL conversation, not a scripted reading
+- The Host is curious, asks good questions, and helps guide the discussion
+- The Expert provides deep insights, examples, and explanations
 
-IMPORTANT - Make the dialogue sound NATURAL and CONVERSATIONAL (not like reading):
-- Include natural speech patterns: "Well...", "So...", "You know...", "I think...", "Hmm..."
-- Add reactions: "That's interesting!", "Right.", "Exactly!", "Oh, I see."
-- Use contractions: "don't" instead of "do not", "can't" instead of "cannot"
-- Include brief pauses with "... " for emphasis or thinking
-- Vary sentence length - mix short responses with longer explanations
-- Add filler words occasionally: "like", "kind of", "sort of", "basically"
-- Show personality: Host should be curious and engaging, Expert should be knowledgeable but approachable
-- Avoid overly formal language - make it sound like friends discussing a topic
+NATURAL SPEECH GUIDELINES:
+- Use contractions (don't, can't, it's, we're, etc.)
+- Include occasional filler words naturally (um, uh, well, you know, I mean)
+- Use pauses (...) for thinking or emphasis
+- React naturally ("Oh wow", "That's interesting", "Wait, really?")
+- Interrupt occasionally or build on each other's points
+- Use casual transitions ("So basically", "In other words", "Here's the thing")
 
-CRITICAL FOR DEPTH:
-- Never rush through a topic - if something is important, spend time on it
-- The Host should frequently ask follow-up questions like "Can you explain that more?" or "What does that mean in practice?"
-- The Expert should always provide concrete examples, analogies, or real-world applications when explaining concepts
-- Explore the "why" and "how" behind every point, not just the "what"
-- When a concept has implications, discuss them thoroughly
-
-{f'Additional instructions: {user_instructions}' if user_instructions else ''}"""
+STYLE GUIDELINES:
+- Conversational and engaging, not dry or academic
+- Use analogies and real-world examples to explain complex concepts
+- Include brief personal anecdotes or references where appropriate
+- Balance depth with accessibility
+- Keep the energy up - this should be fun to listen to!
+"""
         
-        logger.info(f"🧠 Generating script with {self.model}...")
-        start_time = time.time()
+        if user_instructions:
+            system_prompt += f"\n\nADDITIONAL INSTRUCTIONS FROM USER:\n{user_instructions}"
+        
+        user_message = f"""Please create a podcast script based on the following content.
+
+Remember:
+- Target length: ~{target_word_count} words
+- Format: "Host: ..." and "Expert: ..." alternating
+- Make it sound like a REAL, natural conversation
+- Cover the content thoroughly according to {podcast_mode} mode
+
+CONTENT TO CONVERT TO PODCAST:
+
+{content}
+"""
+        
+        logger.info(f"🧠 Generating podcast script ({podcast_mode} mode, ~{target_word_count} words)...")
+        logger.info(f"   Content length: {len(content)} chars ({len(content.split())} words)")
         
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": f"Transform the following content into a podcast dialogue:\n\n{content}"}
+                    {"role": "user", "content": user_message}
                 ],
                 temperature=creativity,
-                max_tokens=self.config.llm.max_tokens
+                max_tokens=self.config.llm.max_tokens,
             )
             
-            elapsed = time.time() - start_time
             script = response.choices[0].message.content
-            logger.info(f"✅ Script generated in {elapsed:.1f}s ({len(script)} characters)")
-            
+            logger.info(f"✅ Script generated: {len(script)} chars ({len(script.split())} words)")
             return script
             
         except Exception as e:
-            error_msg = str(e)
             logger.error(f"Failed to generate script: {e}")
+            raise
+    
+    def generate_coverage_script(self, content: str) -> str:
+        """
+        Generate a script coverage report from a screenplay/CCSL using LM Studio.
+        
+        Uses the coverage system prompt from config. The output contains two parts:
+        1. A structured markdown coverage report (for text reference)
+        2. An audio narration script with "Analyst:" prefixes (for TTS)
+        
+        Args:
+            content: The screenplay, script, or CCSL content
+        
+        Returns:
+            Generated coverage text (both structured report and narration script)
+        """
+        coverage_config = self.config.coverage
+        system_prompt = coverage_config.system_prompt
+        
+        if not system_prompt:
+            raise ValueError(
+                "Coverage system prompt is not configured. "
+                "Please add a 'coverage.system_prompt' section to config.yaml."
+            )
+        
+        # Inject analyst name into the prompt
+        analyst_name = coverage_config.analyst_name
+        system_prompt = system_prompt.replace("[Analyst Name]", analyst_name)
+        
+        from datetime import datetime
+        today = datetime.now().strftime("%m/%d/%y")
+        system_prompt = system_prompt.replace("[Today's Date in MM/DD/YY format]", today)
+        
+        user_message = f"""Please generate a complete script coverage report for the following screenplay/CCSL.
+
+Output BOTH parts as specified:
+1. Part 1: The structured markdown coverage report (between ---COVERAGE REPORT--- and ---END REPORT--- markers)
+2. Part 2: The full audio narration script (with "Analyst:" prefixed sections)
+
+Do NOT abbreviate or skip any sections. The narration script must cover everything in the structured report.
+
+SCREENPLAY/CCSL CONTENT:
+
+{content}
+"""
+        
+        logger.info("🧠 Generating script coverage...")
+        logger.info(f"   Content length: {len(content)} chars ({len(content.split())} words)")
+        logger.info(f"   Analyst: {analyst_name}")
+        
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=self.config.llm.temperature,
+                max_tokens=self.config.llm.max_tokens,
+            )
             
-            # Provide helpful error messages
-            if "connection" in error_msg.lower() or "refused" in error_msg.lower():
-                raise RuntimeError(
-                    "Lost connection to LM Studio. Please ensure LM Studio is still running "
-                    "with the model loaded. For very long content, the model may take time to respond."
-                )
-            elif "timeout" in error_msg.lower():
-                raise RuntimeError(
-                    "Request timed out. The content may be too long. "
-                    "Try with shorter content or check if LM Studio is responding."
-                )
-            else:
-                raise RuntimeError(f"Script generation failed: {e}")
+            script = response.choices[0].message.content
+            logger.info(f"✅ Coverage generated: {len(script)} chars ({len(script.split())} words)")
+            return script
+            
+        except Exception as e:
+            logger.error(f"Failed to generate coverage: {e}")
+            raise
 
 
 class KokoroTTSClient:
-    """Client for text-to-speech synthesis using Kokoro."""
+    """Client for Kokoro TTS via OpenAI-compatible API."""
     
     def __init__(self, config: Config):
         self.config = config
-        self.server = None
         self.client = None
+        self.server = None
     
     def start(self):
-        """Start the embedded Kokoro TTS server if needed."""
+        """Start the Kokoro TTS server and initialize client."""
         kokoro_config = self.config.tts.kokoro
-        host = kokoro_config.server.host
-        port = kokoro_config.server.port
         
-        if is_port_in_use(host, port):
-            logger.info(f"🔊 Kokoro TTS server already running at http://{host}:{port}")
-        else:
-            logger.info("🔊 Starting embedded Kokoro TTS server...")
+        # Check if server is already running
+        if is_port_in_use(kokoro_config.server.host, kokoro_config.server.port):
+            logger.info(f"🔗 Kokoro TTS server already running on port {kokoro_config.server.port}")
+        elif kokoro_config.server.auto_start:
+            # Start embedded server
             self.server = EmbeddedTTSServer(
-                host=host,
-                port=port,
-                model_name=kokoro_config.model
+                host=kokoro_config.server.host,
+                port=kokoro_config.server.port
             )
-            self.server.start(blocking=False)
+            self.server.start()
+            logger.info(f"🚀 Started embedded Kokoro TTS server on port {kokoro_config.server.port}")
+            time.sleep(3)  # Wait for server to initialize
+        else:
+            raise RuntimeError(
+                f"Kokoro TTS server not running on port {kokoro_config.server.port}. "
+                f"Start it with: python src/tts_server.py"
+            )
         
+        # Create OpenAI client pointing to TTS server
         self.client = OpenAI(
-            base_url=f"http://{host}:{port}/v1",
+            base_url=f"http://{kokoro_config.server.host}:{kokoro_config.server.port}/v1",
             api_key="not-needed"
         )
     
     def synthesize(self, text: str, voice: str) -> bytes:
         """
-        Synthesize text to audio using Kokoro.
+        Synthesize text to audio using Kokoro TTS.
         
         Args:
             text: Text to synthesize
-            voice: Voice name (e.g., "af_bella", "am_adam")
+            voice: Voice name (e.g., "af_bella")
         
         Returns:
             Audio bytes (WAV format)
@@ -308,9 +386,7 @@ class KokoroTTSClient:
                 voice=voice,
                 input=text
             )
-            audio_content = response.content
-            logger.debug(f"KokoroTTS synthesize: Got {len(audio_content) if audio_content else 0} bytes for text: '{text[:50]}...'")
-            return audio_content
+            return response.content
         except Exception as e:
             logger.error(f"Kokoro TTS synthesis failed: {e}")
             raise
@@ -321,45 +397,35 @@ class KokoroTTSClient:
         
         Args:
             segments: List of podcast segments
-            max_workers: Maximum parallel workers
+            max_workers: Number of parallel workers
         
         Returns:
             List of audio bytes in order
         """
-        logger.info(f"🎙️ Synthesizing {len(segments)} audio segments with Kokoro...")
+        logger.info(f"🎙️ Synthesizing {len(segments)} audio segments with Kokoro TTS...")
         start_time = time.time()
         
         results = [None] * len(segments)
         
-        # Use ThreadPoolExecutor for parallel synthesis
+        def synthesize_one(index_seg):
+            idx, seg = index_seg
+            try:
+                audio = self.synthesize(seg.text, seg.voice)
+                return idx, audio
+            except Exception as e:
+                logger.error(f"Failed to synthesize segment {idx}: {e}")
+                raise
+        
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = {
-                executor.submit(self.synthesize, seg.text, seg.voice): i
-                for i, seg in enumerate(segments)
-            }
+            futures = {executor.submit(synthesize_one, (i, seg)): i for i, seg in enumerate(segments)}
             
             completed = 0
             for future in as_completed(futures):
-                idx = futures[future]
-                try:
-                    audio_data = future.result()
-                    results[idx] = audio_data
-                    # Log audio data size for debugging
-                    if audio_data:
-                        logger.debug(f"   Segment {idx}: Got {len(audio_data)} bytes of audio")
-                    else:
-                        logger.warning(f"   Segment {idx}: Got EMPTY audio data!")
-                    completed += 1
-                    if completed % 5 == 0:
-                        logger.info(f"   Progress: {completed}/{len(segments)} segments")
-                except Exception as e:
-                    logger.error(f"Failed to synthesize segment {idx}: {e}")
-                    raise
-            
-            # Log final results summary
-            non_none_count = sum(1 for r in results if r is not None)
-            empty_count = sum(1 for r in results if r is not None and len(r) == 0)
-            logger.info(f"   Batch synthesis complete: {non_none_count}/{len(segments)} segments have audio, {empty_count} are empty")
+                idx, audio = future.result()
+                results[idx] = audio
+                completed += 1
+                if completed % 5 == 0:
+                    logger.info(f"   Progress: {completed}/{len(segments)} segments")
         
         elapsed = time.time() - start_time
         logger.info(f"✅ Kokoro audio synthesis complete in {elapsed:.1f}s")
@@ -368,96 +434,73 @@ class KokoroTTSClient:
 
 
 class VoiceCloneTTSClient:
-    """Client for text-to-speech synthesis using Qwen3-TTS voice cloning."""
+    """Client for Qwen3-TTS voice cloning."""
     
     def __init__(self, config: Config):
         self.config = config
         self.model = None
-        self.voice_prompts = {}  # Cache for voice prompts per speaker
+        self.voice_prompts = {}
     
     def start(self):
-        """Load the Qwen3-TTS model and create voice prompts."""
+        """Load the voice cloning model and create voice prompts."""
         vc_config = self.config.tts.voice_clone
         
-        logger.info(f"🔊 Loading Qwen3-TTS model: {vc_config.model}")
+        logger.info("🧠 Loading Qwen3-TTS voice cloning model...")
         
         try:
             from qwen_tts import Qwen3TTSModel
-            import torch
             
             # Determine device
             device = vc_config.device
             if device == "auto":
+                import torch
                 if torch.cuda.is_available():
                     device = "cuda:0"
-                elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+                elif hasattr(__import__('torch'), 'backends') and __import__('torch').backends.mps.is_available():
                     device = "mps"
                 else:
                     device = "cpu"
             
-            # Determine dtype
-            dtype_map = {
-                "bfloat16": torch.bfloat16,
-                "float16": torch.float16,
-                "float32": torch.float32,
-            }
-            torch_dtype = dtype_map.get(vc_config.dtype, torch.bfloat16)
-            
-            # Check attention implementation
-            attn = vc_config.attention
-            if attn == "flash_attention_2" and not torch.cuda.is_available():
-                logger.info("Flash attention 2 requires CUDA. Falling back to sdpa.")
-                attn = "sdpa"
-            
-            logger.info(f"   Device: {device}, dtype: {vc_config.dtype}, attention: {attn}")
+            logger.info(f"   Device: {device}")
             
             self.model = Qwen3TTSModel.from_pretrained(
                 vc_config.model,
-                device_map=device,
-                dtype=torch_dtype,
-                attn_implementation=attn,
+                device=device,
             )
-            
-            logger.info("✅ Qwen3-TTS model loaded successfully")
+            logger.info("✅ Model loaded successfully")
             
             # Create voice prompts for each speaker
             self._create_voice_prompts()
             
         except ImportError:
             raise ImportError(
-                "qwen-tts is not installed. Install it with: pip install qwen-tts"
+                "qwen_tts package not installed. "
+                "Install with: pip install qwen-tts"
             )
         except Exception as e:
-            logger.error(f"Failed to load Qwen3-TTS model: {e}")
+            logger.error(f"Failed to load voice cloning model: {e}")
             raise
     
     def _create_voice_prompts(self):
-        """Create voice clone prompts for each speaker."""
+        """Create voice clone prompts from reference audio files."""
         vc_config = self.config.tts.voice_clone
         
-        # Create voice prompt for speaker_1
-        speaker_1 = vc_config.voices.speaker_1
-        if speaker_1.ref_audio:
-            logger.info(f"🎤 Creating voice prompt for speaker_1 ({speaker_1.profile})...")
-            ref_audio_path = self._resolve_path(speaker_1.ref_audio)
-            self.voice_prompts["speaker_1"] = self.model.create_voice_clone_prompt(
-                ref_audio=ref_audio_path,
-                ref_text=speaker_1.ref_text,
-                x_vector_only_mode=False,
+        for speaker_id in ["speaker_1", "speaker_2"]:
+            speaker_config = vc_config.voices.__dict__.get(speaker_id)
+            if not speaker_config:
+                continue
+            
+            ref_audio = self._resolve_path(speaker_config.ref_audio)
+            ref_text = speaker_config.ref_text
+            
+            logger.info(f"🎤 Creating voice prompt for {speaker_id} ({speaker_config.profile})...")
+            
+            voice_prompt = self.model.create_voice_clone_prompt(
+                ref_audio=ref_audio,
+                ref_text=ref_text
             )
-            logger.info(f"   ✅ Voice prompt created for {speaker_1.profile}")
-        
-        # Create voice prompt for speaker_2
-        speaker_2 = vc_config.voices.speaker_2
-        if speaker_2.ref_audio:
-            logger.info(f"🎤 Creating voice prompt for speaker_2 ({speaker_2.profile})...")
-            ref_audio_path = self._resolve_path(speaker_2.ref_audio)
-            self.voice_prompts["speaker_2"] = self.model.create_voice_clone_prompt(
-                ref_audio=ref_audio_path,
-                ref_text=speaker_2.ref_text,
-                x_vector_only_mode=False,
-            )
-            logger.info(f"   ✅ Voice prompt created for {speaker_2.profile}")
+            self.voice_prompts[speaker_id] = voice_prompt
+            logger.info(f"   ✅ Voice prompt created for {speaker_config.profile}")
     
     def _resolve_path(self, path: str) -> str:
         """Resolve path relative to config file location."""
@@ -486,9 +529,6 @@ class VoiceCloneTTSClient:
         import re
         
         # Add brief pauses after punctuation for natural rhythm
-        # Replace "." with ". " (slight pause)
-        # Replace "?" with "? " (question pause)
-        # Replace "!" with "! " (emphasis pause)
         text = re.sub(r'\.(\s|$)', '. ', text)
         text = re.sub(r'\?(\s|$)', '? ', text)
         text = re.sub(r'\!(\s|$)', '! ', text)
@@ -496,7 +536,7 @@ class VoiceCloneTTSClient:
         # Add comma pauses for natural breathing
         text = re.sub(r',(\s)', ', ', text)
         
-        # Handle ellipsis for thinking pauses - ensure they're recognized
+        # Handle ellipsis for thinking pauses
         text = re.sub(r'\.\.\.', '... ', text)
         
         # Add slight pause before certain words for emphasis
@@ -578,7 +618,13 @@ class VoiceCloneTTSClient:
         for i, seg in enumerate(segments):
             try:
                 # Map speaker name to speaker_id
-                speaker_id = "speaker_1" if seg.speaker.lower() == "host" else "speaker_2"
+                # "Host" and "Analyst" both use speaker_1 (single narrator or host voice)
+                speaker_lower = seg.speaker.lower()
+                if speaker_lower in ("host", "analyst"):
+                    speaker_id = "speaker_1"
+                else:
+                    speaker_id = "speaker_2"
+                
                 audio = self.synthesize(seg.text, speaker_id)
                 results.append(audio)
                 
@@ -662,14 +708,10 @@ def parse_script(script: str, config: Config) -> List[PodcastSegment]:
     skipped_lines = 0
     
     # More flexible regex patterns to handle various LLM output formats
-    # Pattern 1: "Host: text" or "Expert: text" (standard)
-    # Pattern 2: "**Host:** text" (markdown bold)
-    # Pattern 3: "Speaker 1: text" or "Speaker 2: text"
-    # Pattern 4: "HOST:" or "EXPERT:" (uppercase)
     patterns = [
-        r'^\*?\*?(Host|Expert|Speaker\s*1|Speaker\s*2)\*?\*?\s*:\s*(.+)$',  # With optional markdown bold
-        r'^(HOST|EXPERT)\s*:\s*(.+)$',  # Uppercase
-        r'^(Speaker\s*[12])\s*:\s*(.+)$',  # Speaker 1/2
+        r'^\*?\*?(Host|Expert|Speaker\s*1|Speaker\s*2)\*?\*?\s*:\s*(.+)$',
+        r'^(HOST|EXPERT)\s*:\s*(.+)$',
+        r'^(Speaker\s*[12])\s*:\s*(.+)$',
     ]
     
     for line in lines:
@@ -714,7 +756,6 @@ def parse_script(script: str, config: Config) -> List[PodcastSegment]:
         
         if not matched:
             skipped_lines += 1
-            # Log first few skipped lines for debugging
             if skipped_lines <= 5:
                 logger.debug(f"   Skipped line: '{line[:80]}...'")
     
@@ -728,6 +769,121 @@ def parse_script(script: str, config: Config) -> List[PodcastSegment]:
         logger.warning("   Expected format: 'Host: text' or 'Expert: text'")
     
     return segments
+
+
+def parse_coverage_script(script: str, config: Config) -> CoverageResult:
+    """
+    Parse a coverage script into narration segments and structured report.
+    
+    The LLM output has two parts:
+    1. Structured report between ---COVERAGE REPORT--- and ---END REPORT--- markers
+    2. Narration script with "Analyst:" prefixed lines
+    
+    Args:
+        script: Raw coverage text from LLM
+        config: Configuration object
+    
+    Returns:
+        CoverageResult with segments, structured report, and raw text
+    """
+    # Get voice for the analyst (always speaker_1)
+    provider = config.tts.provider
+    if provider == "voice_clone":
+        analyst_voice = "speaker_1"
+    else:
+        analyst_voice = config.tts.kokoro.voices.speaker_1
+    
+    # Extract structured report
+    structured_report = ""
+    report_match = re.search(
+        r'---\s*COVERAGE REPORT\s*---\s*\n(.*?)\n\s*---\s*END REPORT\s*---',
+        script,
+        re.DOTALL | re.IGNORECASE
+    )
+    if report_match:
+        structured_report = report_match.group(1).strip()
+        logger.info(f"   Extracted structured report: {len(structured_report)} chars")
+    else:
+        logger.warning("   Could not find structured report markers (---COVERAGE REPORT--- / ---END REPORT---)")
+        structured_report = script
+    
+    # Extract narration section (everything after ---END REPORT--- or entire script)
+    narration_text = script
+    if report_match:
+        end_pos = report_match.end()
+        narration_text = script[end_pos:]
+    
+    # Parse "Analyst:" prefixed lines into segments
+    segments = []
+    lines = narration_text.strip().split('\n')
+    current_text_parts = []
+    
+    for line in lines:
+        stripped = line.strip()
+        
+        # Check if this line starts a new Analyst segment
+        analyst_match = re.match(r'^\*?\*?Analyst\*?\*?\s*:\s*(.*)$', stripped, re.IGNORECASE)
+        
+        if analyst_match:
+            # Save any accumulated text from previous segment
+            if current_text_parts:
+                full_text = ' '.join(current_text_parts).strip()
+                # Remove markdown formatting
+                full_text = re.sub(r'\*\*(.+?)\*\*', r'\1', full_text)
+                full_text = re.sub(r'\*(.+?)\*', r'\1', full_text)
+                if full_text:
+                    segments.append(PodcastSegment(
+                        speaker="Analyst",
+                        text=full_text,
+                        voice=analyst_voice
+                    ))
+            # Start new segment with text after "Analyst:"
+            remainder = analyst_match.group(1).strip()
+            current_text_parts = [remainder] if remainder else []
+        elif stripped and not stripped.startswith('#'):
+            # Continuation of current segment (non-empty, non-header lines)
+            if current_text_parts is not None:
+                current_text_parts.append(stripped)
+    
+    # Don't forget the last segment
+    if current_text_parts:
+        full_text = ' '.join(current_text_parts).strip()
+        full_text = re.sub(r'\*\*(.+?)\*\*', r'\1', full_text)
+        full_text = re.sub(r'\*(.+?)\*', r'\1', full_text)
+        if full_text:
+            segments.append(PodcastSegment(
+                speaker="Analyst",
+                text=full_text,
+                voice=analyst_voice
+            ))
+    
+    logger.info(f"   Coverage parsing: {len(segments)} narration segments extracted")
+    
+    if not segments:
+        logger.warning("⚠️ No narration segments parsed from coverage!")
+        logger.warning("   Attempting fallback: treating entire output as single narration...")
+        # Fallback: try to find any paragraph-like blocks and use them
+        paragraphs = re.split(r'\n\s*\n', narration_text.strip())
+        for para in paragraphs:
+            para = para.strip()
+            if len(para) > 50:  # Skip very short fragments
+                # Remove markdown formatting
+                para = re.sub(r'\*\*(.+?)\*\*', r'\1', para)
+                para = re.sub(r'\*(.+?)\*', r'\1', para)
+                para = re.sub(r'^#+\s*', '', para, flags=re.MULTILINE)  # Remove headers
+                if para:
+                    segments.append(PodcastSegment(
+                        speaker="Analyst",
+                        text=para,
+                        voice=analyst_voice
+                    ))
+        logger.info(f"   Fallback parsing: {len(segments)} segments from paragraph splitting")
+    
+    return CoverageResult(
+        segments=segments,
+        structured_report=structured_report,
+        raw_text=script
+    )
 
 
 def load_content(input_path: str) -> str:
@@ -885,6 +1041,10 @@ class PodcastGenerator:
         Returns:
             Path to generated file (audio or script)
         """
+        # Check if this is coverage mode
+        if self.config.conversation.podcast_mode == "coverage":
+            return self.generate_coverage(input_path, output_path, script_only)
+        
         # Load content
         logger.info(f"📂 Loading content from: {input_path}")
         content = load_content(input_path)
@@ -954,6 +1114,10 @@ class PodcastGenerator:
         Returns:
             Path to generated file
         """
+        # Check if this is coverage mode
+        if self.config.conversation.podcast_mode == "coverage":
+            return self.generate_coverage_from_text(text, output_path, script_only)
+        
         # Check LLM connection
         if not self.llm_client.check_connection():
             raise RuntimeError(
@@ -1001,6 +1165,133 @@ class PodcastGenerator:
             segments=segments,
             pause_between=self.config.tts.pause_between_segments,
             pause_on_change=self.config.tts.pause_on_speaker_change
+        )
+        
+        return output_path
+    
+    def generate_coverage(self, input_path: str, output_path: str,
+                          script_only: bool = False) -> str:
+        """
+        Generate a script coverage audio from a screenplay/CCSL.
+        
+        Single-speaker narration of a structured coverage report.
+        
+        Args:
+            input_path: Path to screenplay/CCSL file
+            output_path: Path for output audio file
+            script_only: If True, only generate the report without audio
+        
+        Returns:
+            Path to generated file (audio or report)
+        """
+        # Load content
+        logger.info(f"📂 Loading screenplay/CCSL from: {input_path}")
+        content = load_content(input_path)
+        logger.info(f"   Content length: {len(content)} characters")
+        
+        # Check LLM connection
+        if not self.llm_client.check_connection():
+            raise RuntimeError(
+                f"Cannot connect to LM Studio at {self.config.llm.base_url}. "
+                "Please ensure LM Studio is running with the model loaded."
+            )
+        
+        # Generate coverage
+        coverage_text = self.llm_client.generate_coverage_script(content)
+        
+        # Parse coverage into segments and structured report
+        coverage_result = parse_coverage_script(coverage_text, self.config)
+        logger.info(f"📝 Parsed {len(coverage_result.segments)} narration segments")
+        
+        # Always save the structured report
+        report_path = Path(output_path).with_suffix('.txt')
+        save_script(coverage_result.structured_report, str(report_path))
+        logger.info(f"📄 Coverage report saved to: {report_path}")
+        
+        # Check if we have any segments to synthesize
+        if not coverage_result.segments:
+            raise RuntimeError(
+                "No narration segments found in the generated coverage. "
+                "The LLM may not have produced 'Analyst:' prefixed sections. "
+                "Check the coverage output format."
+            )
+        
+        if script_only:
+            return str(report_path)
+        
+        # Start TTS server
+        self.tts_client.start_server()
+        
+        # Synthesize audio (single speaker)
+        audio_chunks = self.tts_client.synthesize_batch(coverage_result.segments)
+        
+        # Concatenate with coverage-specific pauses (no speaker-change pauses needed)
+        concatenate_audio(
+            audio_chunks,
+            output_path,
+            segments=coverage_result.segments,
+            pause_between=self.config.coverage.pause_between_segments,
+            pause_on_change=0.0  # Single speaker, no turn-taking pauses
+        )
+        
+        return output_path
+    
+    def generate_coverage_from_text(self, text: str, output_path: str,
+                                    script_only: bool = False) -> str:
+        """
+        Generate a script coverage audio from raw text.
+        
+        Args:
+            text: Raw screenplay/CCSL text
+            output_path: Path for output audio file
+            script_only: If True, only generate the report without audio
+        
+        Returns:
+            Path to generated file
+        """
+        # Check LLM connection
+        if not self.llm_client.check_connection():
+            raise RuntimeError(
+                f"Cannot connect to LM Studio at {self.config.llm.base_url}. "
+                "Please ensure LM Studio is running with the model loaded."
+            )
+        
+        # Generate coverage
+        coverage_text = self.llm_client.generate_coverage_script(text)
+        
+        # Parse coverage into segments and structured report
+        coverage_result = parse_coverage_script(coverage_text, self.config)
+        logger.info(f"📝 Parsed {len(coverage_result.segments)} narration segments")
+        
+        # Always save the structured report
+        report_path = Path(output_path).with_suffix('.txt')
+        save_script(coverage_result.structured_report, str(report_path))
+        logger.info(f"📄 Coverage report saved to: {report_path}")
+        
+        # Check if we have any segments to synthesize
+        if not coverage_result.segments:
+            raise RuntimeError(
+                "No narration segments found in the generated coverage. "
+                "The LLM may not have produced 'Analyst:' prefixed sections. "
+                "Check the coverage output format."
+            )
+        
+        if script_only:
+            return str(report_path)
+        
+        # Start TTS server
+        self.tts_client.start_server()
+        
+        # Synthesize audio (single speaker)
+        audio_chunks = self.tts_client.synthesize_batch(coverage_result.segments)
+        
+        # Concatenate with coverage-specific pauses
+        concatenate_audio(
+            audio_chunks,
+            output_path,
+            segments=coverage_result.segments,
+            pause_between=self.config.coverage.pause_between_segments,
+            pause_on_change=0.0
         )
         
         return output_path
