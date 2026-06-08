@@ -997,9 +997,23 @@ def save_coverage_docx(structured_report: str, output_path: str):
             continue
         
         # Check for heading (LOGLINE, SUMMARY, COMMENTS)
-        if line.startswith('**') and line.endswith(':**'):
-            heading_text = line.strip('*:')
+        # Handles both "**HEADING:**" on its own line and "**HEADING:** content" inline
+        heading_match = re.match(r'^\*\*(\w+):\*\*\s*(.*)$', line)
+        if heading_match and heading_match.group(1) in ('LOGLINE', 'SUMMARY', 'COMMENTS'):
+            heading_text = heading_match.group(1)
             heading = doc.add_heading(heading_text, level=2)
+            # If there's inline content after the heading, add it as a paragraph
+            inline_content = heading_match.group(2).strip()
+            if inline_content:
+                para = doc.add_paragraph()
+                # Handle bold markers in inline content
+                parts = re.split(r'(\*\*.*?\*\*)', inline_content)
+                for part in parts:
+                    if part.startswith('**') and part.endswith('**'):
+                        run = para.add_run(part[2:-2])
+                        run.bold = True
+                    else:
+                        para.add_run(part)
             i += 1
             continue
         
@@ -1036,6 +1050,11 @@ def save_coverage_docx(structured_report: str, output_path: str):
                 else:
                     # Regular text
                     para.add_run(part)
+        else:
+            # Line didn't match any pattern and paragraph collector skipped it
+            # (e.g. starts with ** but not a heading/recommendation).
+            # Force-advance to prevent infinite loop.
+            i += 1
     
     # Save document
     path = Path(output_path)
