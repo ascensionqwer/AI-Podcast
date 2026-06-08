@@ -1,13 +1,13 @@
 # Podcastfy Local - AI Podcast Generator
 
 A unified podcast generation system that runs **100% locally** on Apple Silicon using:
-- **LM Studio** with qwen3.6-35b-a3b for script generation
-- **Kokoro TTS** via MLX-Audio for high-quality voice synthesis
-- **Docling** for document conversion (PDF, DOCX, PPTX, etc.)
+- A local LLM server for script generation
+- Kokoro TTS via MLX-Audio for high-quality voice synthesis
+- Docling for document conversion (PDF, DOCX, PPTX, etc.)
 
 ---
 
-## 📄 Supported Input Formats
+## Supported Input Formats
 
 Podcastfy Local now supports a wide range of document formats:
 
@@ -21,11 +21,11 @@ Podcastfy Local now supports a wide range of document formats:
 | Excel | `.xlsx`, `.xls` | Microsoft Excel spreadsheets |
 | HTML | `.html`, `.htm` | HTML web pages |
 
-Documents are automatically converted to markdown using [Docling](https://github.com/docling-project/docling) before being processed by the LLM. No intermediate files are saved - the converted content is fed directly to the script generator.
+Documents are automatically converted to markdown using Docling before being processed by the LLM. No intermediate files are saved - the converted content is fed directly to the script generator.
 
 ---
 
-## 📋 Complete Setup Guide for New MacBook
+## Complete Setup Guide for New MacBook
 
 Follow these steps to set up Podcastfy Local on a brand new MacBook (Apple Silicon M1/M2/M3/M4).
 
@@ -68,20 +68,20 @@ python3 --version
 
 ---
 
-### Step 3: Install LM Studio
+### Step 3: Install Local LLM Server
 
-1. Download LM Studio from: https://lmstudio.ai/download
+1. Download a local LLM server application from the official website
 2. Open the downloaded `.dmg` file
-3. Drag LM Studio to Applications folder
-4. Open LM Studio from Applications
+3. Drag to Applications folder
+4. Open the application from Applications
 
 **Download the Required Model:**
 
-1. In LM Studio, click the **Search** icon (magnifying glass)
-2. Search for: `qwen3.5-122b-a10b`
-3. Download the model (this is a large model, ~70GB, may take time)
+1. In the app, click the **Search** icon (magnifying glass)
+2. Search for a suitable open-source LLM model
+3. Download the model (this may take time depending on size)
 4. Once downloaded, click the **Chat** icon
-5. Select `qwen3.5-122b-a10b` from the model dropdown
+5. Select your downloaded model from the dropdown
 6. Click **Load Model**
 
 **Enable the Local Server:**
@@ -97,10 +97,10 @@ python3 --version
 
 ```bash
 # Navigate to your preferred location (example)
-cd ~/Documents/Work/Codes
+cd ~/Documents/Projects
 
 # Clone the repository
-git clone https://github.com/ascensionqwer/AI_Local_Podcast.git Podcastfy
+git clone <YOUR_REPOSITORY_URL> Podcastfy
 
 # Enter the project directory
 cd Podcastfy
@@ -130,7 +130,7 @@ pip install -r requirements.txt
 ```
 
 This will install:
-- `openai` - For LM Studio API communication
+- `openai` - For local LLM API communication
 - `mlx-audio` - For Kokoro TTS on Apple Silicon
 - `customtkinter` - For the GUI
 - `docling` - For document conversion (PDF, DOCX, PPTX, etc.)
@@ -157,7 +157,7 @@ python gui.py
 source venv/bin/activate
 
 # Generate a podcast
-python podcast.py --input ./assets/FSO_Law_Indonesia.md --output ./output/podcast.wav
+python podcast.py --input ./assets/example_content.md --output ./output/podcast.wav
 ```
 
 ---
@@ -206,17 +206,17 @@ Now you can double-click `Podcastfy.command` on your Desktop to launch the app!
 
 ---
 
-## 🎯 Quick Start Guide
+## Quick Start Guide
 
 ### Using the GUI
 
-1. **Start LM Studio** - Ensure the server is running (port 1234)
+1. **Start your LLM server** - Ensure the server is running (port 1234)
 2. **Launch Podcastfy** - Run `python gui.py` or double-click the desktop launcher
 3. **Select Input File** - Click on a file in the Assets list or upload a new one
 4. **Choose Podcast Mode** - Select from Summary, Analysis, or Full mode
 5. **Custom Instructions (Analysis Mode)** - When using Analysis mode, a text box appears where you can optionally enter specific focus areas or instructions for the podcast discussion
 6. **Set Output Name** - Enter a filename (e.g., `my_podcast.wav`)
-7. **Click Generate** - Press the "🚀 Generate Podcast" button
+7. **Click Generate** - Press the "Generate Podcast" button
 8. **Wait for Completion** - The progress bar shows generation status
 9. **Play Output** - Click on the generated file in the Output list
 
@@ -235,7 +235,7 @@ python podcast.py -i ./assets/article.md -o ./output/podcast.wav -v
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Podcastfy/
@@ -251,13 +251,13 @@ Podcastfy/
 │   ├── doc_converter.py    # Document to markdown converter
 │   └── tts_server.py       # Embedded Kokoro TTS server
 ├── assets/                 # Input content files (.md, .txt, .pdf, .docx, etc.)
-│   └── FSO_Law_Indonesia.md
+│   └── example_content.md  # Place your input files here
 └── output/                 # Generated podcasts (.wav, .mp3)
 ```
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Edit `config.yaml` to customize settings:
 
@@ -266,7 +266,7 @@ Edit `config.yaml` to customize settings:
 You can choose between two TTS providers by changing `tts.provider`:
 
 - **`kokoro`** - Built-in Kokoro TTS voices (fast, no setup required)
-- **`voice_clone`** - Custom cloned voices using Qwen3-TTS (requires reference audio)
+- **`voice_clone`** - Custom cloned voices using a voice cloning model (requires reference audio)
 
 ```yaml
 # TTS Configuration
@@ -292,26 +292,26 @@ tts:
 
 ### Voice Cloning Configuration (provider="voice_clone")
 
-Voice cloning uses Qwen3-TTS to clone voices from reference audio samples. Place your voice profiles in the `Profile/` directory.
+Voice cloning uses a TTS model to clone voices from reference audio samples. Place your voice profiles in the `Profile/` directory.
 
 ```yaml
 tts:
   provider: "voice_clone"
   voice_clone:
-    model: "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+    model: "<YOUR_TTS_MODEL_ID>"
     device: "auto"  # auto, cuda:0, mps, cpu
     dtype: "bfloat16"
     attention: "flash_attention_2"
     max_tokens: 2048
     voices:
       speaker_1:  # Female voice (Host)
-        profile: "Lana"
-        ref_audio: "Profile/Lana/Lana.wav"
+        profile: "ProfileA"
+        ref_audio: "Profile/ProfileA/profile_a.wav"
         ref_text: "The transcript of the reference audio..."
         language: "English"
       speaker_2:  # Male voice (Expert)
-        profile: "Goat"
-        ref_audio: "Profile/Goat/Goat.wav"
+        profile: "ProfileB"
+        ref_audio: "Profile/ProfileB/profile_b.wav"
         ref_text: "The transcript of the reference audio..."
         language: "English"
 ```
@@ -327,12 +327,12 @@ To use voice cloning, you need reference audio files and their transcripts:
 Example structure:
 ```
 Profile/
-├── Lana/
-│   ├── Lana.wav    # Reference audio
-│   └── Lana.txt    # Transcript
-├── Goat/
-│   ├── Goat.wav
-│   └── Goat.txt
+├── ProfileA/
+│   ├── profile_a.wav    # Reference audio
+│   └── profile_a.txt    # Transcript
+├── ProfileB/
+│   ├── profile_b.wav
+│   └── profile_b.txt
 ```
 
 ### Full Configuration Example
@@ -340,7 +340,7 @@ Profile/
 ```yaml
 # LLM Configuration
 llm:
-  model: "qwen3.5-122b-a10b"
+  model: "<YOUR_LLM_MODEL_ID>"
   base_url: "http://localhost:1234/v1"
   temperature: 0.7
   max_tokens: 262144
@@ -363,7 +363,7 @@ conversation:
 
 ---
 
-## 🎙️ Podcast Modes
+## Podcast Modes
 
 | Mode | Description | Length | Use Case |
 |------|-------------|--------|----------|
@@ -399,7 +399,7 @@ The podcast will be as long as needed to cover all content properly!
 
 ---
 
-## 🎙️ Available Voices
+## Available Voices
 
 ### Kokoro TTS Voices (provider="kokoro")
 
@@ -419,9 +419,9 @@ Voice cloning uses custom voice profiles from the `Profile/` directory. Each pro
 **Included Profiles:**
 | Profile | Description | Use Case |
 |---------|-------------|----------|
-| `Lana` | Female voice | Host/Speaker 1 |
-| `Goat` | Male voice, authoritative | Expert/Speaker 2 |
-| `Wesley` | Custom voice | User-defined |
+| `ProfileA` | Female voice | Host/Speaker 1 |
+| `ProfileB` | Male voice, authoritative | Expert/Speaker 2 |
+| `ProfileC` | Custom voice | User-defined |
 
 **Creating Custom Profiles:**
 1. Record 5-30 seconds of clear speech
@@ -430,16 +430,16 @@ Voice cloning uses custom voice profiles from the `Profile/` directory. Each pro
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
-### LM Studio Connection Error
+### Local LLM Server Connection Error
 
 ```
-❌ Cannot connect to LM Studio at http://localhost:1234/v1
+Cannot connect to local LLM server at http://localhost:1234/v1
 ```
 
 **Solution:**
-1. Open LM Studio
+1. Open your LLM server application
 2. Go to Server tab (left sidebar)
 3. Click "Start Server"
 4. Ensure port is 1234
@@ -458,23 +458,23 @@ Error: Failed to load Kokoro model
 ### Voice Cloning Model Not Found
 
 ```
-Error: Failed to load Qwen3-TTS model
+Error: Failed to load voice cloning model
 ```
 
 **Solution:**
 1. Ensure internet connection for first download
 2. Model is cached locally after first download (~1.7GB)
-3. Check qwen-tts installation: `pip install qwen-tts --upgrade`
+3. Check the TTS package installation: `pip install <tts-package> --upgrade`
 
 ### Voice Cloning Reference Audio Not Found
 
 ```
-Error: Reference audio not found: Profile/Name/Name.wav
+Error: Reference audio not found: Profile/Name/name.wav
 ```
 
 **Solution:**
 1. Check that the profile directory exists in `Profile/`
-2. Verify the audio file has the correct name (e.g., `Lana.wav`)
+2. Verify the audio file has the correct name
 3. Ensure the path in `config.yaml` matches the actual file location
 
 ### Memory Issues with Voice Cloning
@@ -509,7 +509,7 @@ Error: Port 8880 already in use
 
 ---
 
-## 💡 Tips for Best Results
+## Tips for Best Results
 
 1. **Content Quality** - Well-structured documents with clear sections produce better podcasts
 2. **Document Formats** - PDF, DOCX, and PPTX files are automatically converted to markdown
@@ -520,7 +520,7 @@ Error: Port 8880 already in use
 
 ---
 
-## 🔄 Updating the Project
+## Updating the Project
 
 ```bash
 # Navigate to your project directory (adjust path as needed)
@@ -532,7 +532,7 @@ pip install -r requirements.txt --upgrade
 
 ---
 
-## 📝 License
+## License
 
 This project uses open-source components:
 - Kokoro TTS model from mlx-community
@@ -541,16 +541,16 @@ This project uses open-source components:
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-- [Podcastfy](https://github.com/souzatharsis/podcastfy) - Inspiration
-- [LM Studio](https://lmstudio.ai/) - Local LLM runtime
-- [MLX-Audio](https://github.com/Blaizzy/mlx-audio) - Apple Silicon TTS
+- Original Podcastfy project - Inspiration
+- Local LLM server tools - Local inference runtime
+- MLX-Audio - Apple Silicon TTS
 
 ---
 
-## 📞 Support
+## Support
 
 For issues or questions:
 1. Check the Troubleshooting section above
-2. Open an issue on GitHub: https://github.com/ascensionqwer/AI_Local_Podcast/issues
+2. Open an issue on GitHub at your repository's issue tracker
