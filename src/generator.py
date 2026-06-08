@@ -463,10 +463,7 @@ class VoiceCloneTTSClient:
             
             logger.info(f"   Device: {device}")
             
-            self.model = Qwen3TTSModel.from_pretrained(
-                vc_config.model,
-                device=device,
-            )
+            self.model = Qwen3TTSModel.from_pretrained(vc_config.model)
             logger.info("✅ Model loaded successfully")
             
             # Create voice prompts for each speaker
