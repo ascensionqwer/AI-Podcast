@@ -7,6 +7,7 @@ Run with: python gui.py
 """
 
 import os
+import re
 import sys
 import threading
 import shutil
@@ -631,18 +632,10 @@ class CoverageApp(ctk.CTk):
         current_name = self.output_filename.get()
         # Remove extension
         base_name = current_name.rsplit('.', 1)[0] if '.' in current_name else current_name
-        # Remove any existing mode suffix
-        for suffix in ["_summary", "_analysis", "_full", "_coverage"]:
-            if base_name.endswith(suffix):
-                base_name = base_name[:-len(suffix)]
-                break
-        # Also remove _coverage or _podcast suffix if present to rebuild cleanly
-        for suffix in ["_coverage", "_podcast"]:
-            if base_name.endswith(suffix):
-                base_name = base_name[:-len(suffix)]
-                break
-        # Add new name with mode suffix
-        new_name = f"{base_name}_coverage_{choice}.wav"
+        # Remove trailing _mode suffix using regex (handles all modes cleanly)
+        base_name = re.sub(r'_(summary|analysis|full|coverage)$', '', base_name)
+        # Add new mode suffix
+        new_name = f"{base_name}_{choice}.wav"
         self.output_filename.set(new_name)
     
     def _generation_thread(self):

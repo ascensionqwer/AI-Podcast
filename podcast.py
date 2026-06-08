@@ -171,7 +171,7 @@ Examples:
     # Display configuration summary
     console.print("\n[bold cyan]Podcastfy Local[/bold cyan]")
     console.print(f"  LLM: {config.llm.model} @ {config.llm.base_url}")
-    console.print(f"  TTS: Kokoro @ http://{config.tts.server.host}:{config.tts.server.port}")
+    console.print(f"  TTS: {config.tts.provider} @ http://{config.tts.kokoro.server.host}:{config.tts.kokoro.server.port}")
     console.print(f"  Input: {args.input}")
     console.print(f"  Output: {args.output}")
     if args.script_only:
