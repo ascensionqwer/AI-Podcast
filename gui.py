@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Podcastfy Local - Desktop GUI Application
-A modern GUI for generating podcasts using LM Studio + Kokoro TTS.
+Script Coverage & CCSL Analyzer - Desktop GUI Application
+A modern GUI for generating script coverage and CCSL analysis using LM Studio + TTS.
 
 Run with: python gui.py
 """
@@ -21,14 +21,14 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
-class PodcastfyApp(ctk.CTk):
+class CoverageApp(ctk.CTk):
     """Main application window."""
     
     def __init__(self):
         super().__init__()
         
         # Configure window
-        self.title("Podcastfy Local - AI Podcast Generator")
+        self.title("Script Coverage & CCSL Analyzer")
         self.geometry("900x650")
         self.minsize(800, 550)
         
@@ -43,11 +43,11 @@ class PodcastfyApp(ctk.CTk):
         
         # State variables
         self.selected_file = None
-        self.output_filename = ctk.StringVar(value="podcast_summary.wav")
+        self.output_filename = ctk.StringVar(value="coverage_summary.wav")
         self.podcast_mode = ctk.StringVar(value="summary")
         self.user_instructions = ctk.StringVar(value="")
         self.is_generating = False
-        self.status_text = ctk.StringVar(value="Ready - Select a file to begin")
+        self.status_text = ctk.StringVar(value="Ready - Select a screenplay or CCSL to begin")
         
         # Configure grid layout
         self.grid_columnconfigure(1, weight=1)
@@ -77,23 +77,23 @@ class PodcastfyApp(ctk.CTk):
         # Logo/Title
         self.logo_label = ctk.CTkLabel(
             self.sidebar,
-            text="🎙️ Podcastfy Local",
+            text="🎬 Script Coverage",
             font=ctk.CTkFont(size=22, weight="bold")
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 5))
         
         self.subtitle_label = ctk.CTkLabel(
             self.sidebar,
-            text="AI Podcast Generator",
+            text="Screenplay & CCSL Analyzer",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
         self.subtitle_label.grid(row=1, column=0, padx=20, pady=(0, 20))
         
-        # File Selection Section
+        # Input File Section
         self.file_section = ctk.CTkLabel(
             self.sidebar,
-            text="─── Input File ───",
+            text="─── Screenplay / CCSL ───",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
@@ -102,7 +102,7 @@ class PodcastfyApp(ctk.CTk):
         # Upload button
         self.upload_btn = ctk.CTkButton(
             self.sidebar,
-            text="📁 Upload File (.md/.txt/.pdf/.docx)",
+            text="📁 Upload Script (.md/.txt/.pdf/.docx)",
             command=self._upload_file,
             height=40,
             font=ctk.CTkFont(size=14)
@@ -121,7 +121,7 @@ class PodcastfyApp(ctk.CTk):
         # Assets folder buttons
         self.assets_btn = ctk.CTkButton(
             self.sidebar,
-            text="📂 Open Assets Folder",
+            text="📂 Open Scripts Folder",
             command=self._open_assets_folder,
             height=32,
             fg_color="transparent",
@@ -143,7 +143,7 @@ class PodcastfyApp(ctk.CTk):
         # Output filename entry
         self.output_entry = ctk.CTkEntry(
             self.sidebar,
-            placeholder_text="podcast.wav",
+            placeholder_text="coverage.wav",
             textvariable=self.output_filename,
             height=32,
             font=ctk.CTkFont(size=12)
@@ -163,16 +163,16 @@ class PodcastfyApp(ctk.CTk):
         )
         self.output_btn.grid(row=8, column=0, padx=20, pady=5)
         
-        # Podcast Mode Section
+        # Analysis Mode Section
         self.mode_section = ctk.CTkLabel(
             self.sidebar,
-            text="─── Mode ───",
+            text="─── Analysis Mode ───",
             font=ctk.CTkFont(size=12),
             text_color="gray"
         )
         self.mode_section.grid(row=9, column=0, padx=20, pady=(15, 5))
         
-        # Podcast mode dropdown
+        # Mode dropdown
         self.mode_dropdown = ctk.CTkOptionMenu(
             self.sidebar,
             values=["summary", "analysis", "full", "coverage"],
@@ -186,7 +186,7 @@ class PodcastfyApp(ctk.CTk):
         # Mode description
         self.mode_desc = ctk.CTkLabel(
             self.sidebar,
-            text="summary: Quick overview (~400 words)",
+            text="summary: Quick script overview (~17 min)",
             font=ctk.CTkFont(size=10),
             text_color="gray",
             wraplength=240
@@ -211,7 +211,7 @@ class PodcastfyApp(ctk.CTk):
             border_color="gray30"
         )
         self.instructions_textbox.grid(row=13, column=0, padx=20, pady=5)
-        self.instructions_textbox.insert("1.0", "Optional: Enter specific focus areas or instructions for analysis mode...")
+        self.instructions_textbox.insert("1.0", "Optional: Enter specific focus areas for the analysis...")
         self.instructions_textbox.grid_remove()  # Hidden by default
         
         # Coverage Info Section (for coverage mode)
@@ -225,7 +225,7 @@ class PodcastfyApp(ctk.CTk):
         
         self.coverage_info_text = ctk.CTkLabel(
             self.sidebar,
-            text="Script coverage generates a single-narrator audio report analyzing the screenplay/CCSL. A structured text report is always saved alongside the audio.",
+            text="Generates a full script coverage report from a screenplay or CCSL. Outputs audio narration (.wav), a structured text report (.txt), and a Word document (.docx).",
             font=ctk.CTkFont(size=10),
             text_color="gray",
             wraplength=240,
@@ -248,7 +248,7 @@ class PodcastfyApp(ctk.CTk):
         self.script_only_var = ctk.StringVar(value="off")
         self.script_only_cb = ctk.CTkCheckBox(
             self.sidebar,
-            text="Script only (no audio)",
+            text="Report only (no audio)",
             variable=self.script_only_var,
             onvalue="on",
             offvalue="off",
@@ -259,7 +259,7 @@ class PodcastfyApp(ctk.CTk):
         # Generate button
         self.generate_btn = ctk.CTkButton(
             self.sidebar,
-            text="🚀 Generate Podcast",
+            text="🎬 Generate Coverage",
             command=self._generate_podcast,
             height=50,
             font=ctk.CTkFont(size=16, weight="bold"),
@@ -280,7 +280,7 @@ class PodcastfyApp(ctk.CTk):
         # Version label
         self.version_label = ctk.CTkLabel(
             self.sidebar,
-            text="v1.1.0 | LM Studio + Kokoro",
+            text="v1.2.0 | Script Coverage & CCSL",
             font=ctk.CTkFont(size=10),
             text_color="gray"
         )
@@ -301,7 +301,7 @@ class PodcastfyApp(ctk.CTk):
         
         self.header_label = ctk.CTkLabel(
             self.header_frame,
-            text="Files in Assets Folder",
+            text="Scripts in Assets Folder",
             font=ctk.CTkFont(size=18, weight="bold")
         )
         self.header_label.grid(row=0, column=0, sticky="w")
@@ -320,14 +320,14 @@ class PodcastfyApp(ctk.CTk):
         # File list frame
         self.file_list_frame = ctk.CTkScrollableFrame(
             self.main_frame,
-            label_text="Available Input Files (click to select)"
+            label_text="Screenplays & CCSL Files (click to select)"
         )
         self.file_list_frame.grid(row=1, column=0, sticky="nsew", pady=10)
         
         # Output files frame
         self.output_list_frame = ctk.CTkScrollableFrame(
             self.main_frame,
-            label_text="Generated Podcasts (click to play)"
+            label_text="Generated Coverage (click to open)"
         )
         self.output_list_frame.grid(row=2, column=0, sticky="nsew", pady=10)
     
@@ -399,7 +399,7 @@ class PodcastfyApp(ctk.CTk):
         else:
             empty_label = ctk.CTkLabel(
                 self.file_list_frame,
-                text="No supported files in assets folder\n\nSupported: .md, .txt, .pdf, .docx, .pptx\nClick 'Upload File' or add files to the assets folder",
+                text="No screenplays or CCSL files in assets folder\n\nSupported: .md, .txt, .pdf, .docx, .pptx\nClick 'Upload Script' or add files to the assets folder",
                 text_color="gray",
                 font=ctk.CTkFont(size=12)
             )
@@ -409,13 +409,24 @@ class PodcastfyApp(ctk.CTk):
         wav_files = sorted(self.output_dir.glob("*.wav"), key=lambda x: x.name.lower())
         mp3_files = sorted(self.output_dir.glob("*.mp3"), key=lambda x: x.name.lower())
         txt_outputs = sorted(self.output_dir.glob("*.txt"), key=lambda x: x.name.lower())
-        all_outputs = wav_files + mp3_files + txt_outputs
+        docx_outputs = sorted(self.output_dir.glob("*.docx"), key=lambda x: x.name.lower())
+        all_outputs = wav_files + mp3_files + txt_outputs + docx_outputs
         
         if all_outputs:
             for file_path in all_outputs:
+                # Choose icon based on file type
+                if file_path.suffix == '.wav':
+                    icon = "🔊"
+                elif file_path.suffix == '.mp3':
+                    icon = "🎵"
+                elif file_path.suffix == '.docx':
+                    icon = "📝"
+                else:
+                    icon = "📄"
+                
                 btn = ctk.CTkButton(
                     self.output_list_frame,
-                    text=f"🎵 {file_path.name}",
+                    text=f"{icon} {file_path.name}",
                     command=lambda p=file_path: self._play_output(p),
                     height=36,
                     fg_color="transparent",
@@ -429,17 +440,18 @@ class PodcastfyApp(ctk.CTk):
         else:
             empty_label = ctk.CTkLabel(
                 self.output_list_frame,
-                text="No generated podcasts yet\n\nSelect a file and click 'Generate Podcast'",
+                text="No generated coverage yet\n\nSelect a screenplay or CCSL and click 'Generate Coverage'",
                 text_color="gray",
                 font=ctk.CTkFont(size=12)
             )
             empty_label.pack(pady=20)
     
     def _upload_file(self):
-        """Open file dialog to upload a file."""
+        """Open file dialog to upload a screenplay or CCSL file."""
         file_path = filedialog.askopenfilename(
-            title="Select Input File",
+            title="Select Screenplay or CCSL File",
             filetypes=[
+                ("Screenplay / CCSL files", "*.md *.txt *.pdf *.docx *.doc"),
                 ("Markdown files", "*.md"),
                 ("Text files", "*.txt"),
                 ("PDF files", "*.pdf"),
@@ -470,12 +482,12 @@ class PodcastfyApp(ctk.CTk):
                 shutil.copy2(file_path, dest_path)
                 self._select_file(dest_path)
                 self._refresh_file_lists()
-                self.status_text.set(f"✅ File copied: {source_path.name}")
+                self.status_text.set(f"✅ Script added: {source_path.name}")
             else:
                 self._select_file(source_path)
     
     def _select_file(self, file_path: Path):
-        """Select a file for podcast generation."""
+        """Select a screenplay or CCSL file for analysis."""
         self.selected_file = file_path
         self.selected_file_label.configure(text=f"✅ {file_path.name}")
         self.status_text.set(f"Selected: {file_path.name}")
@@ -483,7 +495,7 @@ class PodcastfyApp(ctk.CTk):
         # Update output filename based on input and current mode
         base_name = file_path.stem
         current_mode = self.podcast_mode.get()
-        self.output_filename.set(f"{base_name}_podcast_{current_mode}.wav")
+        self.output_filename.set(f"{base_name}_coverage_{current_mode}.wav")
         
         # Refresh to show selection highlight
         self._refresh_file_lists()
@@ -528,12 +540,12 @@ class PodcastfyApp(ctk.CTk):
             self.llm_status.configure(text="🔴 LM Studio Offline", text_color="red")
     
     def _generate_podcast(self):
-        """Start podcast generation."""
+        """Start coverage generation."""
         if self.is_generating:
             return
         
         if not self.selected_file:
-            self.status_text.set("❌ Please select a file first!")
+            self.status_text.set("❌ Please select a screenplay or CCSL first!")
             return
         
         # Check LM Studio
@@ -551,7 +563,7 @@ class PodcastfyApp(ctk.CTk):
         self.is_generating = True
         self.generate_btn.configure(state="disabled", text="⏳ Generating...")
         self.progress_bar.start()
-        self.status_text.set("🚀 Starting generation...")
+        self.status_text.set("🚀 Starting analysis...")
         
         thread = threading.Thread(
             target=self._generation_thread,
@@ -560,12 +572,12 @@ class PodcastfyApp(ctk.CTk):
         thread.start()
     
     def _on_mode_change(self, choice: str):
-        """Handle podcast mode selection change."""
+        """Handle analysis mode selection change."""
         descriptions = {
-            "summary": "summary: Comprehensive overview (~17 min)",
-            "analysis": "analysis: Deep dive discussion (~25+ min)",
-            "full": "full: Exhaustive coverage (in-depth)",
-            "coverage": "coverage: Script coverage (single narrator)"
+            "summary": "summary: Quick script overview (~17 min)",
+            "analysis": "analysis: Deep dive script analysis (~25+ min)",
+            "full": "full: Exhaustive script breakdown (in-depth)",
+            "coverage": "coverage: Full coverage report (single narrator)"
         }
         self.mode_desc.configure(text=descriptions.get(choice, ""))
         
@@ -573,7 +585,7 @@ class PodcastfyApp(ctk.CTk):
         if choice == "coverage":
             self.generate_btn.configure(text="🎬 Generate Coverage")
         else:
-            self.generate_btn.configure(text="🚀 Generate Podcast")
+            self.generate_btn.configure(text="🎬 Generate Analysis")
         
         # Show/hide sections based on mode
         if choice == "analysis":
@@ -624,15 +636,17 @@ class PodcastfyApp(ctk.CTk):
             if base_name.endswith(suffix):
                 base_name = base_name[:-len(suffix)]
                 break
-        # Also remove _podcast suffix if present to rebuild cleanly
-        if base_name.endswith("_podcast"):
-            base_name = base_name[:-len("_podcast")]
+        # Also remove _coverage or _podcast suffix if present to rebuild cleanly
+        for suffix in ["_coverage", "_podcast"]:
+            if base_name.endswith(suffix):
+                base_name = base_name[:-len(suffix)]
+                break
         # Add new name with mode suffix
-        new_name = f"{base_name}_podcast_{choice}.wav"
+        new_name = f"{base_name}_coverage_{choice}.wav"
         self.output_filename.set(new_name)
     
     def _generation_thread(self):
-        """Background thread for podcast generation."""
+        """Background thread for coverage generation."""
         try:
             from src.config import load_config
             from src.generator import PodcastGenerator
@@ -666,7 +680,7 @@ class PodcastfyApp(ctk.CTk):
             if current_mode == "coverage":
                 mode_name = "Script Coverage"
             else:
-                mode_name = f"{current_mode.capitalize()} podcast"
+                mode_name = f"{current_mode.capitalize()} analysis"
             self.after(0, lambda: self.status_text.set(f"🧠 Generating {mode_name}..."))
             
             # Generate
@@ -691,7 +705,7 @@ class PodcastfyApp(ctk.CTk):
         if current_mode == "coverage":
             btn_text = "🎬 Generate Coverage"
         else:
-            btn_text = "🚀 Generate Podcast"
+            btn_text = "🎬 Generate Analysis"
         
         self.generate_btn.configure(state="normal", text=btn_text)
         self.progress_bar.stop()
@@ -710,7 +724,7 @@ class PodcastfyApp(ctk.CTk):
 
 def main():
     """Main entry point."""
-    app = PodcastfyApp()
+    app = CoverageApp()
     app.run()
 
 
