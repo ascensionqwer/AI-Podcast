@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git config *)"
+      "Bash(git config *)",
+      "Agent(Explore)",
+      "Bash(git checkout *)",
+      "Read(//Users/wesleygwn/Library/CloudStorage/Nextcloud-wesleygwn@ucla.edu@raspberrypi5/Work/Codes/AI-Podcast/src/**)",
+      "Read(//Users/wesleygwn/Library/CloudStorage/Nextcloud-wesleygwn@ucla.edu@raspberrypi5/Work/Codes/AI-Podcast/**)"
     ]
-  }
+  },
+  "$version": 4
 }
