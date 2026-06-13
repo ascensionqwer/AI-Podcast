@@ -1,5 +1,0 @@
-# Ignore all files in output directory
-*
-# But keep the .gitkeep and .gitignore files
-!.gitkeep
-!.gitignore
